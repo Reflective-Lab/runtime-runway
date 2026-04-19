@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 STATE_DIR="$ROOT_DIR/.converge"
 PID_FILE="$STATE_DIR/runtime.pid"
 MODE="${1:-auto}"
@@ -38,7 +38,7 @@ stop_container() {
   local compose
   compose="$(compose_cmd)" || return 0
   (
-    cd "$ROOT_DIR"
+    cd "$ROOT_DIR/docker"
     eval "$compose down"
   )
 }

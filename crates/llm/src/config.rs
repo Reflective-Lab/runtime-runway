@@ -107,10 +107,10 @@ impl LlmConfig {
 
         // Check special tokens are valid for tokenizer
         if self.tokenizer.tokenizer_type == TokenizerType::Tiktoken {
-            // Llama 3 tiktoken vocab is 128256
-            if self.tokenizer.bos_token_id >= 128256 || self.tokenizer.eos_token_id >= 128256 {
+            // Llama 3 tiktoken vocab is 128_256
+            if self.tokenizer.bos_token_id >= 128_256 || self.tokenizer.eos_token_id >= 128_256 {
                 return Err(ConfigValidationError::InvalidSpecialTokens {
-                    reason: "Token IDs exceed tiktoken vocab size (128256)".to_string(),
+                    reason: "Token IDs exceed tiktoken vocab size (128_256)".to_string(),
                 });
             }
         }
@@ -179,19 +179,14 @@ impl LlmConfig {
 }
 
 /// Precision for model weights and computation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum Precision {
     Fp32,
+    #[default]
     Fp16,
     Bf16,
     Int8,
     Int4,
-}
-
-impl Default for Precision {
-    fn default() -> Self {
-        Self::Fp16
-    }
 }
 
 /// Tokenizer configuration.
@@ -221,26 +216,21 @@ impl Default for TokenizerConfig {
         Self {
             tokenizer_type: TokenizerType::Tiktoken,
             vocab_path: None,
-            bos_token_id: 128000, // Llama 3 default
-            eos_token_id: 128001,
-            pad_token_id: 128002,
+            bos_token_id: 128_000, // Llama 3 default
+            eos_token_id: 128_001,
+            pad_token_id: 128_002,
         }
     }
 }
 
 /// Tokenizer type - choose one and stick with it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum TokenizerType {
     /// BPE tokenizer (tiktoken, used by Llama 3)
+    #[default]
     Tiktoken,
     /// SentencePiece (used by older Llama models)
     SentencePiece,
-}
-
-impl Default for TokenizerType {
-    fn default() -> Self {
-        Self::Tiktoken
-    }
 }
 
 /// Configuration validation errors.

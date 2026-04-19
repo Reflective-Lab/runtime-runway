@@ -8,7 +8,8 @@
 use converge_core::{Context, ContextKey, Engine, Suggestor};
 use converge_llm::{GenerationParams, LlmAgent, LlmConfig, PromptTemplate};
 
-fn main() {
+#[tokio::main]
+async fn main() {
     // Initialize tracing for observability
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
@@ -58,6 +59,7 @@ fn main() {
 
     let mut ctx = Engine::new()
         .run(staged)
+        .await
         .expect("seed inputs should promote")
         .context;
 
@@ -72,7 +74,7 @@ fn main() {
 
     // Execute the agent (this will fail gracefully without loaded model)
     println!("\nExecuting agent...");
-    let effect = agent.execute(&ctx);
+    let effect = agent.execute(&ctx).await;
 
     // Examine the effect
     println!(

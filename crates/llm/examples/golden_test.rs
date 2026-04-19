@@ -12,25 +12,31 @@
 //!
 //! This example requires:
 //! - The `pretrained` feature enabled
-//! - A GPU backend (cuda or tch-gpu) for reasonable performance
+//! - `llama3`
+//! - A backend (`wgpu` for GPU or `ndarray` for CPU)
 //!
 //! ## Running
 //!
 //! ```bash
-//! # With CUDA backend
-//! cargo run --example golden_test --features "cuda,pretrained"
+//! # With GPU acceleration
+//! cargo run --example golden_test --features "wgpu,llama3,pretrained"
 //!
-//! # With LibTorch GPU
-//! cargo run --example golden_test --features "tch-gpu,pretrained"
+//! # With CPU only
+//! cargo run --example golden_test --features "ndarray,llama3,pretrained"
 //! ```
 
 use converge_llm::{InferenceEnvelope, PromptStackBuilder, StateInjection, UserIntent};
 
-#[cfg(all(feature = "llama3", feature = "pretrained", feature = "cuda"))]
-use burn::backend::CudaJit;
+#[cfg(all(feature = "llama3", feature = "pretrained", feature = "wgpu"))]
+type Backend = burn::backend::Wgpu;
 
-#[cfg(all(feature = "llama3", feature = "pretrained", feature = "tch-gpu"))]
-use burn::backend::LibTorch;
+#[cfg(all(
+    feature = "llama3",
+    feature = "pretrained",
+    feature = "ndarray",
+    not(feature = "wgpu")
+))]
+type Backend = burn::backend::NdArray;
 
 fn main() {
     // Print configuration
@@ -66,37 +72,31 @@ fn main() {
     println!("  Max Tokens: {}", envelope.stopping.max_tokens);
     println!();
 
-    // Run inference if a GPU backend is available
-    #[cfg(all(feature = "llama3", feature = "pretrained", feature = "cuda"))]
-    {
-        run_golden_test::<CudaJit<burn::tensor::f16, i32>>(&stack, &envelope);
-    }
-
+    // Run inference if a supported backend is available.
     #[cfg(all(
         feature = "llama3",
         feature = "pretrained",
-        feature = "tch-gpu",
-        not(feature = "cuda")
+        any(feature = "wgpu", feature = "ndarray")
     ))]
     {
-        run_golden_test::<LibTorch<burn::tensor::f16>>(&stack, &envelope);
+        run_golden_test::<Backend>(&stack, &envelope);
     }
 
     #[cfg(not(any(
-        all(feature = "llama3", feature = "pretrained", feature = "cuda"),
+        all(feature = "llama3", feature = "pretrained", feature = "wgpu"),
         all(
             feature = "llama3",
             feature = "pretrained",
-            feature = "tch-gpu",
-            not(feature = "cuda")
+            feature = "ndarray",
+            not(feature = "wgpu")
         )
     )))]
     {
-        println!("⚠️  No GPU backend available.");
+        println!("⚠️  No supported inference backend available.");
         println!();
         println!("To run this example with actual inference, use:");
-        println!("  cargo run --example golden_test --features \"cuda,pretrained\"");
-        println!("  cargo run --example golden_test --features \"tch-gpu,pretrained\"");
+        println!("  cargo run --example golden_test --features \"wgpu,llama3,pretrained\"");
+        println!("  cargo run --example golden_test --features \"ndarray,llama3,pretrained\"");
         println!();
         println!("Contracts validated:");
         println!("  ✓ PromptStack renders correctly");
@@ -107,7 +107,7 @@ fn main() {
 
 #[cfg(all(feature = "llama3", feature = "pretrained"))]
 fn run_golden_test<B: burn::tensor::backend::Backend>(
-    stack: &PromptStack,
+    stack: &converge_llm::PromptStack,
     envelope: &InferenceEnvelope,
 ) {
     use converge_llm::LlamaEngine;
@@ -160,8 +160,8 @@ fn run_golden_test<B: burn::tensor::backend::Backend>(
         Err(e) => {
             println!("✗ Model loading failed: {}", e);
             println!();
-            println!("Make sure you have the 'pretrained' feature enabled and");
-            println!("sufficient GPU memory for Llama 3.2 3B (~6GB VRAM).");
+            println!("Make sure you have the 'llama3' and 'pretrained' features enabled and");
+            println!("sufficient memory for Llama 3.2 3B.");
         }
     }
 }

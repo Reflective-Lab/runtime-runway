@@ -1,8 +1,8 @@
 services:
   converge-runtime:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ${CONVERGE_ROOT:-../../converge}
+      dockerfile: ${RUNWAY_DOCKERFILE:-../runway/docker/Dockerfile}
       args:
         CONVERGE_RUNTIME_FEATURES: "${CONVERGE_RUNTIME_FEATURES:-gcp,auth,firebase}"
     image: converge-runtime:dev

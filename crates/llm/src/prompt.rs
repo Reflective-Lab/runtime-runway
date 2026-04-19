@@ -893,7 +893,7 @@ impl StateInjection {
             && self
                 .recall_context
                 .as_ref()
-                .map_or(true, |r: &crate::recall::RecallContext| r.is_empty())
+                .is_none_or(|r: &crate::recall::RecallContext| r.is_empty())
     }
 
     /// Add recall context to the state.
@@ -1143,7 +1143,7 @@ impl UserIntent {
 }
 
 /// Builder for creating prompt stacks.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct PromptStackBuilder {
     version: Option<PromptVersion>,
     priming: Option<ModelPriming>,
@@ -1151,19 +1151,6 @@ pub struct PromptStackBuilder {
     task_frame: Option<TaskFrame>,
     state: Option<StateInjection>,
     intent: Option<UserIntent>,
-}
-
-impl Default for PromptStackBuilder {
-    fn default() -> Self {
-        Self {
-            version: None,
-            priming: None,
-            policy: None,
-            task_frame: None,
-            state: None,
-            intent: None,
-        }
-    }
 }
 
 impl PromptStackBuilder {

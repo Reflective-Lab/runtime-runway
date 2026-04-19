@@ -673,7 +673,7 @@ impl<B: Backend> LlamaEngine<B> {
 
         // Sort by path for deterministic processing order
         // This ensures the same merge result regardless of model internals
-        snapshots.sort_by(|a, b| a.full_path().cmp(&b.full_path()));
+        snapshots.sort_by_key(burn_store::TensorSnapshot::full_path);
 
         tracing::debug!(
             total_tensors = snapshots.len(),
@@ -702,64 +702,64 @@ impl<B: Backend> LlamaEngine<B> {
                         // Check if the snapshot path matches a target path
                         // Model paths are like "layers.0.attention.wq"
                         // Snapshot paths include ".weight" suffix
-                        if path.contains(model_path) && path.ends_with(".weight") {
-                            if let Some((lora_a, lora_b)) =
+                        if path.contains(model_path)
+                            && path.ends_with(".weight")
+                            && let Some((lora_a, lora_b)) =
                                 adapter_layers.get(adapter_layer.as_str())
-                            {
-                                // Get the original tensor data
-                                if let Ok(data) = snapshot.to_data() {
-                                    let shape = &data.shape;
+                        {
+                            // Get the original tensor data
+                            if let Ok(data) = snapshot.to_data() {
+                                let shape = &data.shape;
 
-                                    // Verify dimensions match
-                                    if shape.len() == 2 {
-                                        let in_features = shape[0];
-                                        let out_features = shape[1];
+                                // Verify dimensions match
+                                if shape.len() == 2 {
+                                    let in_features = shape[0];
+                                    let out_features = shape[1];
 
-                                        // Create the original tensor
-                                        let original: Tensor<B, 2> =
-                                            Tensor::from_data(data.clone(), &self.device);
+                                    // Create the original tensor
+                                    let original: Tensor<B, 2> =
+                                        Tensor::from_data(data.clone(), &self.device);
 
-                                        // Compute LoRA delta
-                                        let delta = crate::lora_merge::compute_lora_delta::<B>(
-                                            lora_a,
-                                            lora_b,
-                                            in_features,
-                                            out_features,
-                                            weights.rank,
-                                            weights.alpha,
-                                            &self.device,
-                                        );
+                                    // Compute LoRA delta
+                                    let delta = crate::lora_merge::compute_lora_delta::<B>(
+                                        lora_a,
+                                        lora_b,
+                                        in_features,
+                                        out_features,
+                                        weights.rank,
+                                        weights.alpha,
+                                        &self.device,
+                                    );
 
-                                        // Apply: W' = W + delta
-                                        let merged = original + delta;
+                                    // Apply: W' = W + delta
+                                    let merged = original + delta;
 
-                                        // Compute hash of delta for audit trail
-                                        let delta_hash = format!("{:x}", {
-                                            use std::hash::{Hash, Hasher};
-                                            let mut hasher =
-                                                std::collections::hash_map::DefaultHasher::new();
-                                            path.hash(&mut hasher);
-                                            weights.rank.hash(&mut hasher);
-                                            (weights.alpha as u32).hash(&mut hasher);
-                                            hasher.finish()
-                                        });
+                                    // Compute hash of delta for audit trail
+                                    let delta_hash = format!("{:x}", {
+                                        use std::hash::{Hash, Hasher};
+                                        let mut hasher =
+                                            std::collections::hash_map::DefaultHasher::new();
+                                        path.hash(&mut hasher);
+                                        weights.rank.hash(&mut hasher);
+                                        (weights.alpha as u32).hash(&mut hasher);
+                                        hasher.finish()
+                                    });
 
-                                        report.add_affected_tensor(&path, delta_hash);
+                                    report.add_affected_tensor(&path, delta_hash);
 
-                                        tracing::debug!(
-                                            path = path,
-                                            shape = ?shape,
-                                            "Applied LoRA delta to tensor"
-                                        );
+                                    tracing::debug!(
+                                        path = path,
+                                        shape = ?shape,
+                                        "Applied LoRA delta to tensor"
+                                    );
 
-                                        // Create modified snapshot
-                                        return TensorSnapshot::from_data(
-                                            merged.to_data(),
-                                            snapshot.path_stack.clone().unwrap_or_default(),
-                                            snapshot.container_stack.clone().unwrap_or_default(),
-                                            snapshot.tensor_id.unwrap_or_else(ParamId::new),
-                                        );
-                                    }
+                                    // Create modified snapshot
+                                    return TensorSnapshot::from_data(
+                                        merged.to_data(),
+                                        snapshot.path_stack.clone().unwrap_or_default(),
+                                        snapshot.container_stack.clone().unwrap_or_default(),
+                                        snapshot.tensor_id.unwrap_or_else(ParamId::new),
+                                    );
                                 }
                             }
                         }
@@ -773,7 +773,7 @@ impl<B: Backend> LlamaEngine<B> {
 
         // Sort modified snapshots by path before applying (deterministic order)
         let mut modified = modified;
-        modified.sort_by(|a, b| a.full_path().cmp(&b.full_path()));
+        modified.sort_by_key(burn_store::TensorSnapshot::full_path);
 
         // Apply modified snapshots back to the model
         self.llama.model.apply(modified, None, None, false);
@@ -954,13 +954,11 @@ impl<B: Backend> LlamaEngine<B> {
         // Determine if we should apply LoRA
         let use_adapter = envelope.adapter_id.is_some() && self.adapter.is_some();
 
-        if use_adapter {
-            if let Some(ref adapter) = self.adapter {
-                tracing::debug!(
-                    adapter_id = %adapter.adapter_id,
-                    "Running inference with LoRA adapter"
-                );
-            }
+        if use_adapter && let Some(ref adapter) = self.adapter {
+            tracing::debug!(
+                adapter_id = %adapter.adapter_id,
+                "Running inference with LoRA adapter"
+            );
         }
 
         // Render the prompt stack to a string
@@ -1313,9 +1311,8 @@ pub fn golden_test<B: Backend>(
         "Golden tests require deterministic envelope"
     );
 
-    let seed = match envelope.seed_policy {
-        SeedPolicy::Fixed(s) => s,
-        _ => panic!("Golden tests require fixed seed"),
+    let SeedPolicy::Fixed(seed) = envelope.seed_policy else {
+        panic!("Golden tests require fixed seed");
     };
 
     let output = engine.generate_raw(

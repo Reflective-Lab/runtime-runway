@@ -13,6 +13,7 @@ use crate::tokenizer::Tokenizer;
 use burn::backend::NdArray;
 use converge_core::{AgentEffect, ContextKey, ProposedFact, Suggestor};
 use serde::{Deserialize, Serialize};
+use std::fmt::Write;
 
 /// An agent that uses an LLM for reasoning and generation.
 ///
@@ -69,9 +70,9 @@ impl LlmAgent {
         for key in &self.prompt_template.context_keys {
             let facts = ctx.get(*key);
             if !facts.is_empty() {
-                prompt.push_str(&format!("## {key:?}\n\n"));
+                let _ = write!(prompt, "## {key:?}\n\n");
                 for fact in facts {
-                    prompt.push_str(&format!("- {}: {}\n", fact.id, fact.content));
+                    let _ = writeln!(prompt, "- {}: {}", fact.id, fact.content);
                 }
                 prompt.push('\n');
             }

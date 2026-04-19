@@ -150,8 +150,7 @@ impl CorpusFingerprint {
         let content_prefix = self
             .content_hash
             .as_ref()
-            .map(|h| if h.len() >= 8 { &h[..8] } else { h.as_str() })
-            .unwrap_or("none");
+            .map_or("none", |h| if h.len() >= 8 { &h[..8] } else { h.as_str() });
 
         format!(
             "schema:{}/embedder:{}@{}/dataset:{}/content:{}/tenant:{}",

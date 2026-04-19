@@ -375,7 +375,7 @@ impl StateSummary {
 
         // Rough token estimate: ~4 chars per token
         let char_count = state.render().len();
-        let estimated_tokens = (char_count + 3) / 4;
+        let estimated_tokens = char_count.div_ceil(4);
 
         Self {
             scalar_keys,
@@ -437,7 +437,7 @@ impl DecisionChain {
     /// Check if the last trace passed validation.
     #[must_use]
     pub fn last_valid(&self) -> bool {
-        self.traces.last().is_some_and(|t| t.is_valid())
+        self.traces.last().is_some_and(DecisionTrace::is_valid)
     }
 
     /// Mark the chain as failed at a specific step.
@@ -472,7 +472,7 @@ impl DecisionChain {
             "IN_PROGRESS"
         };
 
-        let steps: Vec<String> = self.traces.iter().map(|t| t.summary()).collect();
+        let steps: Vec<String> = self.traces.iter().map(DecisionTrace::summary).collect();
 
         format!(
             "Chain {} [{}] ({}ms total)\n  {}",
@@ -494,7 +494,7 @@ impl DecisionChain {
     /// Only completed chains with all valid steps are suitable.
     #[must_use]
     pub fn is_training_candidate(&self) -> bool {
-        self.completed && self.traces.iter().all(|t| t.is_valid())
+        self.completed && self.traces.iter().all(DecisionTrace::is_valid)
     }
 }
 

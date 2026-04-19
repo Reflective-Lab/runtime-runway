@@ -31,7 +31,7 @@ We use strongly typed languages that compile to native code. Rust for the system
 | `converge-application` | The `converge` CLI/TUI binary |
 | `converge-llm` | Local LLM inference (Burn, llama.cpp) |
 
-Both are proprietary and unpublished. They depend on Converge SDK crates via path (`../converge/crates/...`).
+Both are proprietary and unpublished. They depend on a pinned Converge release tag by default, with an optional local Cargo patch to sibling `../converge` for SDK work.
 
 ## Build
 
@@ -48,6 +48,8 @@ just smoke-test     # verify health
 just deploy-cloud-run  # deploy runtime to Cloud Run
 just focus          # session opener — repo health + recent activity
 just sync           # team sync — PRs, issues, recent commits
+just use-local-converge     # patch crates to sibling ../converge
+just use-released-converge  # remove the local override
 ```
 
 ## Rules
@@ -76,7 +78,7 @@ docker/             Container definitions
 ops/                Deployment scripts, GPU infra
 ```
 
-The Converge SDK lives in `../converge/`. Both repos must be siblings under `~/dev/work/`.
+The Converge SDK lives in `../converge/`. Both repos must be siblings under `~/dev/work/` for local SDK work and runtime packaging.
 
 ## Workflows
 

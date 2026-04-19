@@ -298,7 +298,7 @@ impl<B: Backend> InferenceEngine<B> {
         let normalized: Vec<(usize, f32)> = if sum > 0.0 {
             filtered.iter().map(|(i, p)| (*i, p / sum)).collect()
         } else {
-            filtered.to_vec()
+            filtered.clone()
         };
 
         // Step 8: Sample from filtered distribution
@@ -330,8 +330,7 @@ fn argmax(values: &[f32]) -> usize {
         .iter()
         .enumerate()
         .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-        .map(|(i, _)| i)
-        .unwrap_or(0)
+        .map_or(0, |(i, _)| i)
 }
 
 /// Apply softmax to convert logits to probabilities.
@@ -433,7 +432,7 @@ fn sample_from_distribution(distribution: &[(usize, f32)], seed: Option<u64>) ->
     }
 
     // Fallback to last token (shouldn't happen with proper normalization)
-    distribution.last().map(|(i, _)| *i).unwrap_or(0)
+    distribution.last().map_or(0, |(i, _)| *i)
 }
 
 /// Result of a generation request.
@@ -608,9 +607,9 @@ impl TokenizerSnapshot {
     pub fn llama3_default() -> Self {
         Self {
             tokenizer_type: "tiktoken".to_string(),
-            bos_token_id: 128000,
-            eos_token_id: 128001,
-            vocab_size: 128256,
+            bos_token_id: 128_000,
+            eos_token_id: 128_001,
+            vocab_size: 128_256,
         }
     }
 }

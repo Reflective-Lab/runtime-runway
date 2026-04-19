@@ -57,7 +57,9 @@ impl RecallResponse {
     /// Get the provenance envelope hash if available.
     #[must_use]
     pub fn provenance_hash(&self) -> Option<String> {
-        self.provenance.as_ref().map(|p| p.envelope_hash())
+        self.provenance
+            .as_ref()
+            .map(converge_core::recall::RecallProvenanceEnvelope::envelope_hash)
     }
 }
 

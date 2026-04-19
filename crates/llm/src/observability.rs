@@ -654,8 +654,7 @@ pub fn global_metrics() -> &'static dyn MetricsRecorder {
     static NOOP: NoOpMetrics = NoOpMetrics;
     GLOBAL_METRICS
         .get()
-        .map(|arc| arc.as_ref())
-        .unwrap_or(&NOOP)
+        .map_or(&NOOP, std::convert::AsRef::as_ref)
 }
 
 // ============================================================================

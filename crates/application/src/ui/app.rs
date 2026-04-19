@@ -474,22 +474,22 @@ impl App {
     }
 
     pub fn enter_job_detail(&mut self) {
-        if let Some(idx) = self.job_state.selected() {
-            if let Some(job) = self.jobs.get(idx) {
-                if let Some(detail) = self.job_details_cache.get(&job.id) {
-                    self.job_detail = Some(detail.clone());
-                    self.context_facts = detail.facts.clone();
-                } else {
-                    self.job_detail = Some(JobDetail {
-                        info: job.clone(),
-                        facts: Vec::new(),
-                        agents: self.agents.clone(),
-                        proposals: Vec::new(),
-                    });
-                }
-                self.current_view = View::JobDetail;
-                self.update_breadcrumb();
+        if let Some(idx) = self.job_state.selected()
+            && let Some(job) = self.jobs.get(idx)
+        {
+            if let Some(detail) = self.job_details_cache.get(&job.id) {
+                self.job_detail = Some(detail.clone());
+                self.context_facts = detail.facts.clone();
+            } else {
+                self.job_detail = Some(JobDetail {
+                    info: job.clone(),
+                    facts: Vec::new(),
+                    agents: self.agents.clone(),
+                    proposals: Vec::new(),
+                });
             }
+            self.current_view = View::JobDetail;
+            self.update_breadcrumb();
         }
     }
 
@@ -634,82 +634,79 @@ pub async fn run_app(
     loop {
         terminal.draw(|f| super::views::draw(f, &mut app))?;
 
-        if event::poll(Duration::from_millis(100))? {
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    match key.code {
-                        KeyCode::Char('q') | KeyCode::Esc => {
-                            if app.current_view == View::JobDetail {
-                                app.navigate_back();
-                            } else if app.current_view == View::Submit
-                                && !app.submit_form.pack.is_empty()
-                            {
-                                app.submit_form = SubmitForm::new();
-                            } else {
-                                app.running = false;
-                            }
-                        }
-                        KeyCode::Tab | KeyCode::Right => {
-                            app.next_view();
-                        }
-                        KeyCode::BackTab => {
-                            app.prev_view();
-                        }
-                        KeyCode::Left => {
-                            if app.current_view == View::JobDetail {
-                                app.navigate_back();
-                            } else {
-                                app.prev_view();
-                            }
-                        }
-                        KeyCode::Char('1') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                            app.goto_view(0);
-                        }
-                        KeyCode::Char('2') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                            app.goto_view(1);
-                        }
-                        KeyCode::Char('3') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                            app.goto_view(2);
-                        }
-                        KeyCode::Char('4') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                            app.goto_view(3);
-                        }
-                        KeyCode::Char('5') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                            app.goto_view(4);
-                        }
-                        KeyCode::Down | KeyCode::Char('j') => {
-                            app.select_next();
-                        }
-                        KeyCode::Up | KeyCode::Char('k') => {
-                            app.select_prev();
-                        }
-                        KeyCode::Enter => match app.current_view {
-                            View::Jobs => {
-                                app.enter_job_detail();
-                            }
-                            View::Submit => {
-                                if app.submit_form.selected_field == 2 {
-                                    app.submit_job().await;
-                                } else {
-                                    app.submit_form.selected_field += 1;
-                                }
-                            }
-                            _ => {}
-                        },
-                        KeyCode::Char('b') => {
-                            if app.breadcrumb.len() > 1 {
-                                app.navigate_back();
-                            }
-                        }
-                        KeyCode::Char(c) => {
-                            app.handle_char(c);
-                        }
-                        KeyCode::Backspace => {
-                            app.handle_backspace();
-                        }
-                        _ => {}
+        if event::poll(Duration::from_millis(100))?
+            && let Event::Key(key) = event::read()?
+            && key.kind == KeyEventKind::Press
+        {
+            match key.code {
+                KeyCode::Char('q') | KeyCode::Esc => {
+                    if app.current_view == View::JobDetail {
+                        app.navigate_back();
+                    } else if app.current_view == View::Submit && !app.submit_form.pack.is_empty() {
+                        app.submit_form = SubmitForm::new();
+                    } else {
+                        app.running = false;
                     }
                 }
+                KeyCode::Tab | KeyCode::Right => {
+                    app.next_view();
+                }
+                KeyCode::BackTab => {
+                    app.prev_view();
+                }
+                KeyCode::Left => {
+                    if app.current_view == View::JobDetail {
+                        app.navigate_back();
+                    } else {
+                        app.prev_view();
+                    }
+                }
+                KeyCode::Char('1') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    app.goto_view(0);
+                }
+                KeyCode::Char('2') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    app.goto_view(1);
+                }
+                KeyCode::Char('3') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    app.goto_view(2);
+                }
+                KeyCode::Char('4') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    app.goto_view(3);
+                }
+                KeyCode::Char('5') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    app.goto_view(4);
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    app.select_next();
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    app.select_prev();
+                }
+                KeyCode::Enter => match app.current_view {
+                    View::Jobs => {
+                        app.enter_job_detail();
+                    }
+                    View::Submit => {
+                        if app.submit_form.selected_field == 2 {
+                            app.submit_job().await;
+                        } else {
+                            app.submit_form.selected_field += 1;
+                        }
+                    }
+                    _ => {}
+                },
+                KeyCode::Char('b') => {
+                    if app.breadcrumb.len() > 1 {
+                        app.navigate_back();
+                    }
+                }
+                KeyCode::Char(c) => {
+                    app.handle_char(c);
+                }
+                KeyCode::Backspace => {
+                    app.handle_backspace();
+                }
+                _ => {}
             }
         }
 

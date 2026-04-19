@@ -343,10 +343,10 @@ async fn main() -> Result<()> {
 
             // Report experience events captured during the run
             if let Ok(events) = experience_store.query_events(&converge_core::EventQuery::default())
+                && !events.is_empty()
+                && !quiet
             {
-                if !events.is_empty() && !quiet {
-                    info!(events = events.len(), "Experience events captured");
-                }
+                info!(events = events.len(), "Experience events captured");
             }
 
             if !stream && !quiet {

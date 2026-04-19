@@ -40,7 +40,7 @@ use std::collections::HashMap;
 ///
 /// This categorization helps users understand what reproducibility
 /// guarantees they can expect from a given embedder.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum DeterminismLevel {
     /// Bit-exact identical output on the same platform.
     ///
@@ -65,13 +65,8 @@ pub enum DeterminismLevel {
     ///
     /// Remote APIs without temperature control or with stochastic layers.
     /// Trace captures inputs/outputs for audit but cannot replay.
+    #[default]
     AuditOnly,
-}
-
-impl Default for DeterminismLevel {
-    fn default() -> Self {
-        Self::AuditOnly
-    }
 }
 
 impl std::fmt::Display for DeterminismLevel {

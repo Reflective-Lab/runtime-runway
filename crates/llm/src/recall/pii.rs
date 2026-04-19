@@ -5,32 +5,34 @@
 //! Before embedding decision records, sensitive information must be redacted
 //! to prevent PII from being stored in vector indices.
 
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 /// Regex for email addresses.
-static EMAIL_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}").unwrap());
+static EMAIL_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}").unwrap()
+});
 
 /// Regex for phone numbers (various formats).
-static PHONE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\+?[\d\s\-\(\)]{10,}").unwrap());
+static PHONE_REGEX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"\+?[\d\s\-\(\)]{10,}").unwrap());
 
 /// Regex for UUIDs (often customer IDs, session IDs, etc.).
-static UUID_REGEX: Lazy<Regex> = Lazy::new(|| {
+static UUID_REGEX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
     Regex::new(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
         .unwrap()
 });
 
 /// Regex for IP addresses (IPv4).
-static IPV4_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b").unwrap());
+static IPV4_REGEX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b").unwrap());
 
 /// Regex for credit card numbers (basic patterns).
-static CREDIT_CARD_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b").unwrap());
+static CREDIT_CARD_REGEX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b").unwrap());
 
 /// Regex for social security numbers (US format).
-static SSN_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").unwrap());
+static SSN_REGEX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").unwrap());
 
 /// Redact PII from text with stable placeholders.
 ///
@@ -153,7 +155,8 @@ fn unicode_normalization_nfkc(text: &str) -> std::borrow::Cow<'_, str> {
 
 /// Collapse multiple whitespace characters into single spaces.
 fn collapse_whitespace(text: &str) -> String {
-    static WHITESPACE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+").unwrap());
+    static WHITESPACE_REGEX: std::sync::LazyLock<Regex> =
+        std::sync::LazyLock::new(|| Regex::new(r"\s+").unwrap());
 
     WHITESPACE_REGEX.replace_all(text, " ").to_string()
 }

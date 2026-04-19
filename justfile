@@ -3,6 +3,7 @@
 # Usage:   just --list
 
 set dotenv-load := true
+converge_release := "v3.4.0"
 
 # ── Build ──────────────────────────────────────────────────────────────
 
@@ -55,6 +56,28 @@ fix-lint:
 # Format only
 fmt:
     cargo fmt
+
+# ── Converge Source ────────────────────────────────────────────────────
+
+# Use sibling ../converge instead of the pinned release tag
+use-local-converge:
+    mkdir -p .cargo
+    cp .cargo/config.toml.example .cargo/config.toml
+    @echo "Using local converge checkout from ../converge"
+    @echo "Disable with: just use-released-converge"
+
+# Use the pinned release tag from Cargo.toml
+use-released-converge:
+    rm -f .cargo/config.toml
+    @echo "Using pinned converge release {{converge_release}}"
+
+# Show which converge source Cargo will use
+converge-source:
+    @if [ -f .cargo/config.toml ]; then \
+        echo "Local override active: ../converge"; \
+    else \
+        echo "Pinned release active: {{converge_release}}"; \
+    fi
 
 # ── Docs ───────────────────────────────────────────────────────────────
 
@@ -169,4 +192,5 @@ deps:
     @echo "  converge-application  →  converge/{core, experience, provider, domain, knowledge, ...}"
     @echo "  converge-llm          →  converge/{core, domain, provider, storage}"
     @echo ""
-    @echo "Both depend on converge crates via path (../converge/crates/...)"
+    @echo "Pinned release: {{converge_release}} from Reflective-Lab/converge"
+    @echo "Local SDK override: just use-local-converge"

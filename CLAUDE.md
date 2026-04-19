@@ -20,8 +20,9 @@ Distribution, deployment, and infrastructure for the Converge stack.
 
 ## Dependencies
 
-Runway depends on Converge crates via path (`../converge/crates/...`).
-Both repos must be checked out as siblings under `~/dev/work/`.
+Runway pins Converge crates to a release tag by default.
+For local SDK work, use `just use-local-converge` to patch to sibling `../converge`.
+Both repos should still be checked out as siblings under `~/dev/work/`.
 
 ## Session scope
 

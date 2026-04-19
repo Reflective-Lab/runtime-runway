@@ -117,8 +117,7 @@ impl ExecutionPlan {
                 contract: OutputContract::reasoning(),
                 recall_enabled: recall
                     .as_ref()
-                    .map(|r| matches!(r.per_step.reasoning, RecallTrigger::Always))
-                    .unwrap_or(false),
+                    .is_some_and(|r| matches!(r.per_step.reasoning, RecallTrigger::Always)),
             },
             StepPlan {
                 step: DecisionStep::Evaluation,
@@ -127,8 +126,7 @@ impl ExecutionPlan {
                 contract: OutputContract::evaluation(),
                 recall_enabled: recall
                     .as_ref()
-                    .map(|r| matches!(r.per_step.evaluation, RecallTrigger::Always))
-                    .unwrap_or(false),
+                    .is_some_and(|r| matches!(r.per_step.evaluation, RecallTrigger::Always)),
             },
             StepPlan {
                 step: DecisionStep::Planning,
@@ -137,8 +135,7 @@ impl ExecutionPlan {
                 contract: OutputContract::planning(),
                 recall_enabled: recall
                     .as_ref()
-                    .map(|r| matches!(r.per_step.planning, RecallTrigger::Always))
-                    .unwrap_or(false),
+                    .is_some_and(|r| matches!(r.per_step.planning, RecallTrigger::Always)),
             },
         ];
 

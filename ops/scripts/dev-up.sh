@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+CONVERGE_ROOT="${CONVERGE_ROOT:-$ROOT_DIR/../converge}"
 STATE_DIR="$ROOT_DIR/.converge"
 PID_FILE="$STATE_DIR/runtime.pid"
 LOG_FILE="$STATE_DIR/runtime.log"
@@ -10,6 +11,14 @@ PORT="${PORT:-8080}"
 FEATURES="${CONVERGE_RUNTIME_FEATURES:-gcp,auth,firebase}"
 
 mkdir -p "$STATE_DIR"
+
+require_converge_root() {
+  if [[ ! -f "$CONVERGE_ROOT/Cargo.toml" ]]; then
+    echo "Converge source not found at $CONVERGE_ROOT" >&2
+    echo "Set CONVERGE_ROOT or check out ../converge next to runway." >&2
+    exit 1
+  fi
+}
 
 compose_cmd() {
   if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
@@ -45,6 +54,7 @@ start_native() {
     echo "cargo is required for native mode" >&2
     exit 1
   }
+  require_converge_root
 
   if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" >/dev/null 2>&1; then
     echo "Native runtime already running with PID $(cat "$PID_FILE")"
@@ -52,9 +62,9 @@ start_native() {
     return 0
   fi
 
-  echo "Starting converge-runtime in native mode on port ${PORT}"
+  echo "Starting converge-runtime from ${CONVERGE_ROOT} in native mode on port ${PORT}"
   (
-    cd "$ROOT_DIR"
+    cd "$CONVERGE_ROOT"
     nohup env PORT="$PORT" \
       LOCAL_DEV="${LOCAL_DEV:-true}" \
       RUST_LOG="${RUST_LOG:-info}" \
@@ -83,11 +93,14 @@ start_container() {
     echo "No supported compose backend found. Install Docker Desktop, OrbStack, Colima+docker, or Podman." >&2
     exit 1
   }
+  require_converge_root
 
   echo "Starting converge-runtime in container mode with: $compose"
   (
-    cd "$ROOT_DIR"
-    eval "$compose up --build -d converge-runtime"
+    cd "$ROOT_DIR/docker"
+    CONVERGE_ROOT="$CONVERGE_ROOT" \
+      RUNWAY_DOCKERFILE="$ROOT_DIR/docker/Dockerfile" \
+      eval "$compose up --build -d converge-runtime"
   )
 
   wait_for_health

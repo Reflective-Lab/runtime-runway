@@ -58,22 +58,22 @@ impl HealthState {
 
 /// Query GPU info. Returns None if GPU info is unavailable.
 ///
-/// On CUDA builds, this could use NVML to get real GPU stats.
+/// On `wgpu` builds, this returns a placeholder until richer backend metrics exist.
 /// For now, returns a placeholder that indicates the backend type.
 fn query_gpu_info() -> Option<proto::GpuInfo> {
-    // In a real deployment, this would use nvidia-ml-sys or nvml-wrapper
+    // In a real deployment, this would query the active GPU backend directly.
     // to query actual GPU memory and utilization.
-    #[cfg(feature = "cuda")]
+    #[cfg(feature = "wgpu")]
     {
         Some(proto::GpuInfo {
-            device_name: "CUDA device".to_string(),
+            device_name: "wgpu device".to_string(),
             total_memory_mb: 0,
             used_memory_mb: 0,
             utilization_percent: 0.0,
         })
     }
 
-    #[cfg(not(feature = "cuda"))]
+    #[cfg(not(feature = "wgpu"))]
     {
         None
     }

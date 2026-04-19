@@ -122,7 +122,7 @@ impl<B: Backend> LlamaModel<B> {
         // Placeholder: return dummy logits
         tracing::debug!(tokens = tokens.len(), "Running forward pass");
 
-        Ok(vec![0.0; 128256]) // vocab_size logits for last position
+        Ok(vec![0.0; 128_256]) // vocab_size logits for last position
     }
 
     /// Get the next token logits (for autoregressive generation).

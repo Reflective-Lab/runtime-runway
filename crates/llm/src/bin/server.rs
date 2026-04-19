@@ -3,7 +3,7 @@
 //! converge-llm-server — standalone gRPC server for GPU inference.
 //!
 //! Loads a Llama model on startup and exposes it as a `KernelService`.
-//! Designed for deployment on GCE GPU VMs with CUDA.
+//! Uses the `wgpu` backend when enabled and otherwise falls back to `ndarray`.
 //!
 //! # Environment Variables
 //!
@@ -27,13 +27,10 @@ use converge_llm::server::health::HealthState;
 use converge_llm::server::proto::kernel_service_server::KernelServiceServer;
 use converge_llm::server::service::KernelServiceImpl;
 
-#[cfg(feature = "cuda")]
-type ServerBackend = burn::backend::CudaJit<burn::tensor::f16, i32>;
-
-#[cfg(all(not(feature = "cuda"), feature = "wgpu"))]
+#[cfg(feature = "wgpu")]
 type ServerBackend = burn::backend::Wgpu;
 
-#[cfg(all(not(feature = "cuda"), not(feature = "wgpu")))]
+#[cfg(not(feature = "wgpu"))]
 type ServerBackend = burn::backend::ndarray::NdArray;
 
 #[tokio::main]
@@ -151,10 +148,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Detect the backend name based on compiled features.
 fn backend_name() -> &'static str {
-    #[cfg(feature = "cuda")]
-    {
-        return "cuda";
-    }
     #[cfg(feature = "wgpu")]
     {
         return "wgpu";

@@ -463,7 +463,11 @@ impl MergeArtifactBuilder {
         let affected_tensors: Vec<String> =
             self.deltas.iter().map(|d| d.tensor_path.clone()).collect();
 
-        let delta_hashes: Vec<String> = self.deltas.iter().map(|d| d.compute_hash()).collect();
+        let delta_hashes: Vec<String> = self
+            .deltas
+            .iter()
+            .map(DeltaCanonical::compute_hash)
+            .collect();
 
         // Compute overall merge hash (hash of all delta hashes)
         let merge_hash = {
@@ -819,9 +823,9 @@ mod tests {
             MergeArtifactBuilder::new("adapter/test@1.0+sha256:abc", "llama3:8b", 16.0, 8);
 
         // Add in non-sorted order
-        builder.add_delta("layers.2.attention.wq.weight", [4, 4], &vec![0.1f32; 16]);
-        builder.add_delta("layers.0.attention.wq.weight", [4, 4], &vec![0.2f32; 16]);
-        builder.add_delta("layers.1.attention.wq.weight", [4, 4], &vec![0.3f32; 16]);
+        builder.add_delta("layers.2.attention.wq.weight", [4, 4], &[0.1f32; 16]);
+        builder.add_delta("layers.0.attention.wq.weight", [4, 4], &[0.2f32; 16]);
+        builder.add_delta("layers.1.attention.wq.weight", [4, 4], &[0.3f32; 16]);
 
         let artifact = builder.build();
 
@@ -834,11 +838,11 @@ mod tests {
     #[test]
     fn test_merge_artifact_verification() {
         let mut builder1 = MergeArtifactBuilder::new("adapter", "model", 16.0, 8);
-        builder1.add_delta("layer.0", [4, 4], &vec![0.1f32; 16]);
+        builder1.add_delta("layer.0", [4, 4], &[0.1f32; 16]);
         let artifact1 = builder1.build();
 
         let mut builder2 = MergeArtifactBuilder::new("adapter", "model", 16.0, 8);
-        builder2.add_delta("layer.0", [4, 4], &vec![0.1f32; 16]);
+        builder2.add_delta("layer.0", [4, 4], &[0.1f32; 16]);
         let artifact2 = builder2.build();
 
         // Same inputs should verify
@@ -848,11 +852,11 @@ mod tests {
     #[test]
     fn test_merge_artifact_verification_fails_on_mismatch() {
         let mut builder1 = MergeArtifactBuilder::new("adapter1", "model", 16.0, 8);
-        builder1.add_delta("layer.0", [4, 4], &vec![0.1f32; 16]);
+        builder1.add_delta("layer.0", [4, 4], &[0.1f32; 16]);
         let artifact1 = builder1.build();
 
         let mut builder2 = MergeArtifactBuilder::new("adapter2", "model", 16.0, 8);
-        builder2.add_delta("layer.0", [4, 4], &vec![0.1f32; 16]);
+        builder2.add_delta("layer.0", [4, 4], &[0.1f32; 16]);
         let artifact2 = builder2.build();
 
         // Different adapter should fail
@@ -1390,7 +1394,7 @@ mod tests {
 
         // Attempted replay with different data
         let mut builder2 = MergeArtifactBuilder::new("adapter", "model", 16.0, 8);
-        builder2.add_delta("layer.0", [4, 4], &vec![0.2f32; 16]); // Different!
+        builder2.add_delta("layer.0", [4, 4], &[0.2f32; 16]); // Different!
         let replay_attempt = builder2.build();
 
         // Verification should fail with hash mismatch

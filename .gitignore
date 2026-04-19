@@ -19,6 +19,7 @@ Thumbs.db
 # Rust
 **/*.rs.bk
 Cargo.lock
+.cargo/config.toml
 
 # Model weights and artifacts
 *.gguf

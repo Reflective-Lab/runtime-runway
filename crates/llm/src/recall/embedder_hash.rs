@@ -50,7 +50,7 @@ impl HashEmbedder {
 }
 
 impl Embedder for HashEmbedder {
-    fn embedder_id(&self) -> &str {
+    fn embedder_id(&self) -> &'static str {
         "hash-embedder-test"
     }
 

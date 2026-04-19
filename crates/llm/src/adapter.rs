@@ -350,7 +350,7 @@ pub struct AdapterManifest {
     pub rank: usize,
     /// LoRA alpha scaling factor
     pub alpha: f32,
-    /// Target layers (e.g., ["q_proj", "v_proj"])
+    /// Target layers (e.g., `["q_proj", "v_proj"]`)
     pub target_layers: Vec<String>,
     /// Dropout used during training
     pub dropout: f32,
@@ -500,15 +500,15 @@ impl AdapterManifest {
         if let Some(expected_hash) = base_model_hash {
             // Extract the hash from base_model_id if it contains one
             // Format could be "llama3-8b" or "llama3-8b+sha256:abc123"
-            if let Some(adapter_base_hash) = self.base_model_id.split("+sha256:").nth(1) {
-                if adapter_base_hash != expected_hash {
-                    return Err(LlmError::AdapterIncompatible {
-                        reason: format!(
-                            "base model hash mismatch: adapter trained on '{}', got '{}'",
-                            adapter_base_hash, expected_hash
-                        ),
-                    });
-                }
+            if let Some(adapter_base_hash) = self.base_model_id.split("+sha256:").nth(1)
+                && adapter_base_hash != expected_hash
+            {
+                return Err(LlmError::AdapterIncompatible {
+                    reason: format!(
+                        "base model hash mismatch: adapter trained on '{}', got '{}'",
+                        adapter_base_hash, expected_hash
+                    ),
+                });
             }
             // If adapter doesn't have a hash, we can't verify - that's OK
         }

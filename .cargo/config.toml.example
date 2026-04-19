@@ -1,0 +1,9 @@
+[patch."https://github.com/Reflective-Lab/converge"]
+converge-core = { path = "../converge/crates/core" }
+converge-provider = { path = "../converge/crates/provider" }
+converge-domain = { path = "../converge/crates/domain" }
+converge-experience = { path = "../converge/crates/experience" }
+converge-knowledge = { path = "../converge/crates/knowledge" }
+converge-optimization = { path = "../converge/crates/optimization" }
+converge-analytics = { path = "../converge/crates/analytics" }
+converge-storage = { path = "../converge/crates/storage" }

@@ -34,5 +34,5 @@ fn main() {
     }
 
     // Exit with error if contracts need adjustment
-    std::process::exit(if report.all_passed() { 0 } else { 1 });
+    std::process::exit(i32::from(!report.all_passed()));
 }

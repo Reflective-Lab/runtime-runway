@@ -143,8 +143,8 @@ impl Tokenizer {
     #[must_use]
     pub fn vocab_size(&self) -> usize {
         match self.config.tokenizer_type {
-            TokenizerType::Tiktoken => 128256,     // Llama 3 vocab size
-            TokenizerType::SentencePiece => 32000, // Llama 2 default
+            TokenizerType::Tiktoken => 128_256,     // Llama 3 vocab size
+            TokenizerType::SentencePiece => 32_000, // Llama 2 default
         }
     }
 
@@ -205,7 +205,7 @@ impl Tokenizer {
     pub fn estimate_tokens(&self, text: &str) -> usize {
         // Conservative estimate: ~4 chars per token for English
         // This is intentionally pessimistic to avoid context overflows
-        (text.len() + 3) / 4
+        text.len().div_ceil(4)
     }
 
     // Private implementation methods
@@ -286,14 +286,14 @@ mod tests {
     #[test]
     fn test_tokenizer_creation() {
         let tokenizer = Tokenizer::llama3().unwrap();
-        assert_eq!(tokenizer.vocab_size(), 128256);
+        assert_eq!(tokenizer.vocab_size(), 128_256);
     }
 
     #[test]
     fn test_special_tokens() {
         let tokenizer = Tokenizer::llama3().unwrap();
-        assert!(tokenizer.is_special_token(128000)); // BOS
-        assert!(tokenizer.is_special_token(128001)); // EOS
+        assert!(tokenizer.is_special_token(128_000)); // BOS
+        assert!(tokenizer.is_special_token(128_001)); // EOS
         assert!(!tokenizer.is_special_token(100)); // Regular token
     }
 
@@ -301,7 +301,7 @@ mod tests {
     fn test_encode_with_special() {
         let tokenizer = Tokenizer::llama3().unwrap();
         let tokens = tokenizer.encode_with_special("hi", true, true).unwrap();
-        assert_eq!(tokens[0], 128000); // BOS
-        assert_eq!(*tokens.last().unwrap(), 128001); // EOS
+        assert_eq!(tokens[0], 128_000); // BOS
+        assert_eq!(*tokens.last().unwrap(), 128_001); // EOS
     }
 }

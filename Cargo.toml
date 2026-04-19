@@ -14,23 +14,24 @@ repository = "https://github.com/Reflective-Lab/runway"
 publish = false
 
 [workspace.dependencies]
-# Converge crates — path to sibling repo
-converge-model = { path = "../converge/crates/model" }
-converge-pack = { path = "../converge/crates/pack", features = ["strum"] }
-converge-protocol = { path = "../converge/crates/protocol" }
-converge-kernel = { path = "../converge/crates/kernel" }
-converge-client = { path = "../converge/crates/client" }
-converge-core = { path = "../converge/crates/core" }
-converge-provider-api = { path = "../converge/crates/provider-api" }
-converge-provider = { path = "../converge/crates/provider" }
-converge-domain = { path = "../converge/crates/domain" }
-converge-experience = { path = "../converge/crates/experience" }
-converge-knowledge = { path = "../converge/crates/knowledge" }
-converge-optimization = { path = "../converge/crates/optimization" }
-converge-analytics = { path = "../converge/crates/analytics" }
-converge-policy = { path = "../converge/crates/policy" }
-converge-runtime = { path = "../converge/crates/runtime" }
-converge-storage = { path = "../converge/crates/storage", default-features = false }
+# Converge crates — pinned to a specific GitHub release tag by default.
+# For local SDK work, copy `.cargo/config.toml.example` to `.cargo/config.toml`
+# or run `just use-local-converge`.
+converge-model = { git = "https://github.com/Reflective-Lab/converge", tag = "v3.4.0" }
+converge-pack = { git = "https://github.com/Reflective-Lab/converge", tag = "v3.4.0", features = ["strum"] }
+converge-protocol = { git = "https://github.com/Reflective-Lab/converge", tag = "v3.4.0" }
+converge-kernel = { git = "https://github.com/Reflective-Lab/converge", tag = "v3.4.0" }
+converge-client = { git = "https://github.com/Reflective-Lab/converge", tag = "v3.4.0" }
+converge-core = { git = "https://github.com/Reflective-Lab/converge", tag = "v3.4.0" }
+converge-provider-api = { git = "https://github.com/Reflective-Lab/converge", tag = "v3.4.0" }
+converge-provider = { git = "https://github.com/Reflective-Lab/converge", tag = "v3.4.0" }
+converge-domain = { git = "https://github.com/Reflective-Lab/converge", tag = "v3.4.0" }
+converge-experience = { git = "https://github.com/Reflective-Lab/converge", tag = "v3.4.0" }
+converge-knowledge = { git = "https://github.com/Reflective-Lab/converge", tag = "v3.4.0" }
+converge-optimization = { git = "https://github.com/Reflective-Lab/converge", tag = "v3.4.0" }
+converge-analytics = { git = "https://github.com/Reflective-Lab/converge", tag = "v3.4.0" }
+converge-policy = { git = "https://github.com/Reflective-Lab/converge", tag = "v3.4.0" }
+converge-storage = { git = "https://github.com/Reflective-Lab/converge", tag = "v3.4.0", default-features = false }
 
 # Internal
 converge-llm = { path = "crates/llm" }
@@ -51,7 +52,8 @@ encoding_rs = "0.8"
 fastembed = "4"
 futures = "0.3"
 hostname = "0.4"
-llama-burn = { git = "https://github.com/tracel-ai/models", package = "llama-burn", default-features = false }
+# Upstream head moved to Burn 0.21 pre-releases; pin the last Burn 0.20-compatible rev.
+llama-burn = { git = "https://github.com/tracel-ai/models", rev = "42a453dfec66d20ff66d35801dca10d9a998182f", package = "llama-burn", default-features = false }
 llama-cpp-2 = { version = "0.1.143", default-features = false, features = ["metal"] }
 once_cell = "1.19"
 proptest = "1.5"
@@ -106,6 +108,17 @@ struct_field_names = "allow"
 wildcard_imports = "allow"
 too_many_arguments = "allow"
 unused_async = "allow"
+unused_self = "allow"
+field_reassign_with_default = "allow"
+float_cmp = "allow"
+approx_constant = "allow"
+unnecessary_to_owned = "allow"
+match_same_arms = "allow"
+match_wildcard_for_single_variants = "allow"
+struct_excessive_bools = "allow"
+needless_borrows_for_generic_args = "allow"
+unnecessary_sort_by = "allow"
+default_trait_access = "allow"
 
 [profile.quick-release]
 inherits = "release"

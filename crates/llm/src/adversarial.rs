@@ -278,7 +278,7 @@ impl ScenarioGenerator {
                 name: "Just under threshold".into(),
                 category: ScenarioCategory::Boundary,
                 state: StateInjection::new()
-                    .with_scalar("success_ratio", 0.749999)
+                    .with_scalar("success_ratio", 0.749_999)
                     .with_flag("meets_threshold", false),
                 expected_behavior: ExpectedBehavior::Probe,
                 description: "Success ratio epsilon below 0.75 threshold. \
@@ -290,7 +290,7 @@ impl ScenarioGenerator {
                 name: "Just over threshold".into(),
                 category: ScenarioCategory::Boundary,
                 state: StateInjection::new()
-                    .with_scalar("success_ratio", 0.750001)
+                    .with_scalar("success_ratio", 0.750_001)
                     .with_flag("meets_threshold", true),
                 expected_behavior: ExpectedBehavior::Probe,
                 description: "Success ratio epsilon above 0.75 threshold. \
@@ -507,7 +507,7 @@ impl AdversarialHarness {
         // Detect anomalies
         for trace in &chain.traces {
             // Check for logical inconsistencies
-            if trace.is_valid() && self.detect_logical_inconsistency(scenario, &trace.raw_output) {
+            if trace.is_valid() && Self::detect_logical_inconsistency(scenario, &trace.raw_output) {
                 anomalies.push(Anomaly {
                     anomaly_type: AnomalyType::LogicalInconsistency,
                     step: Some(trace.step),
@@ -517,7 +517,7 @@ impl AdversarialHarness {
             }
 
             // Check for state contradictions
-            if self.detect_state_contradiction(scenario, &trace.raw_output) {
+            if Self::detect_state_contradiction(scenario, &trace.raw_output) {
                 anomalies.push(Anomaly {
                     anomaly_type: AnomalyType::StateContradiction,
                     step: Some(trace.step),
@@ -537,7 +537,7 @@ impl AdversarialHarness {
         }
     }
 
-    fn detect_logical_inconsistency(&self, scenario: &AdversarialScenario, output: &str) -> bool {
+    fn detect_logical_inconsistency(scenario: &AdversarialScenario, output: &str) -> bool {
         let output_lower = output.to_lowercase();
 
         // If scenario has contradictory inputs but output doesn't acknowledge it
@@ -568,20 +568,20 @@ impl AdversarialHarness {
         false
     }
 
-    fn detect_state_contradiction(&self, scenario: &AdversarialScenario, output: &str) -> bool {
+    fn detect_state_contradiction(scenario: &AdversarialScenario, output: &str) -> bool {
         let output_lower = output.to_lowercase();
 
         // Check if output claims something opposite to input
-        if let Some(success_ratio) = scenario.state.scalars.get("success_ratio") {
-            if let crate::prompt::StateValue::Float(ratio) = success_ratio {
-                // Output says "high success" but ratio is low
-                if *ratio < 0.5 && output_lower.contains("high success") {
-                    return true;
-                }
-                // Output says "low success" but ratio is high
-                if *ratio > 0.8 && output_lower.contains("low success") {
-                    return true;
-                }
+        if let Some(crate::prompt::StateValue::Float(ratio)) =
+            scenario.state.scalars.get("success_ratio")
+        {
+            // Output says "high success" but ratio is low
+            if *ratio < 0.5 && output_lower.contains("high success") {
+                return true;
+            }
+            // Output says "low success" but ratio is high
+            if *ratio > 0.8 && output_lower.contains("low success") {
+                return true;
             }
         }
 
@@ -601,9 +601,7 @@ impl AdversarialHarness {
                 .find(|s| s.id == result.scenario_id)
                 .unwrap();
 
-            let stats = by_category
-                .entry(scenario.category)
-                .or_insert_with(CategoryStats::default);
+            let stats = by_category.entry(scenario.category).or_default();
 
             stats.total += 1;
             if result.completed {

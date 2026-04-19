@@ -368,19 +368,15 @@ fn validate_planning(
             let line_lower = line.to_lowercase();
 
             // Check for "CAPABILITY:" format
-            if line_lower.contains("capability:") {
-                if let Some(idx) = line_lower.find("capability:") {
-                    let cap_name = line[idx + 11..]
-                        .trim()
-                        .split_whitespace()
-                        .next()
-                        .unwrap_or("");
-                    if !allowed_capabilities
-                        .iter()
-                        .any(|c| c.eq_ignore_ascii_case(cap_name))
-                    {
-                        unknown_capabilities.push(cap_name.to_string());
-                    }
+            if line_lower.contains("capability:")
+                && let Some(idx) = line_lower.find("capability:")
+            {
+                let cap_name = line[idx + 11..].split_whitespace().next().unwrap_or("");
+                if !allowed_capabilities
+                    .iter()
+                    .any(|c| c.eq_ignore_ascii_case(cap_name))
+                {
+                    unknown_capabilities.push(cap_name.to_string());
                 }
             }
 
@@ -392,13 +388,11 @@ fn validate_planning(
                     // Only consider valid capability-like names (alphanumeric + underscore)
                     if !cap_name.is_empty()
                         && cap_name.chars().all(|c| c.is_alphanumeric() || c == '_')
-                    {
-                        if !allowed_capabilities
+                        && !allowed_capabilities
                             .iter()
                             .any(|c| c.eq_ignore_ascii_case(cap_name))
-                        {
-                            unknown_capabilities.push(cap_name.to_string());
-                        }
+                    {
+                        unknown_capabilities.push(cap_name.to_string());
                     }
                     remaining = &remaining[start + end + 1..];
                 } else {
@@ -737,7 +731,7 @@ fn validate_freeform(output: &str, max_tokens: usize) -> ValidationResult {
     let mut warnings = vec![];
 
     // Estimate token count (rough: ~4 chars per token)
-    let estimated_tokens = (output.len() + 3) / 4;
+    let estimated_tokens = output.len().div_ceil(4);
 
     if estimated_tokens <= max_tokens {
         passed.push(format!(
@@ -802,9 +796,8 @@ fn count_step_n_colon(output: &str) -> usize {
     for line in output.lines() {
         let trimmed = line.trim().to_lowercase();
         // Check for "step N:" at start of line
-        if trimmed.starts_with("step ") {
+        if let Some(rest) = trimmed.strip_prefix("step ") {
             // Extract the number after "step "
-            let rest = &trimmed[5..];
             if let Some(colon_pos) = rest.find(':') {
                 let num_part = rest[..colon_pos].trim();
                 if num_part.chars().all(|c| c.is_ascii_digit()) {
@@ -885,7 +878,7 @@ fn extract_scores(output: &str) -> Vec<f32> {
             }
 
             // Normalize percentage to 0-1 range (only if clearly a percentage: 10-100)
-            let normalized = if score >= 10.0 && score <= 100.0 {
+            let normalized = if (10.0..=100.0).contains(&score) {
                 score / 100.0
             } else {
                 score

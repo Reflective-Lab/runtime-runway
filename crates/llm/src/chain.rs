@@ -433,7 +433,7 @@ impl<E: ChainEngine> ChainExecutor<E> {
             .with_input_state(state)
             .with_envelope(envelope)
             .with_prompt_version(&stack.version)
-            .with_contract_type(&format!("{:?}", step_plan.step));
+            .with_contract_type(format!("{:?}", step_plan.step));
 
         // Run inference
         let output = self.engine.generate(&stack, envelope)?;
@@ -660,11 +660,11 @@ fn extract_evaluation_signals(output: &str) -> StepSignals {
     // Extract numeric scores (simple heuristic)
     for word in output.split_whitespace() {
         let cleaned = word.trim_matches(|c: char| !c.is_numeric() && c != '.' && c != '-');
-        if let Ok(score) = cleaned.parse::<f64>() {
-            if (0.0..=1.0).contains(&score) {
-                signals.scores.push(("score".to_string(), score));
-                break; // Take first valid score
-            }
+        if let Ok(score) = cleaned.parse::<f64>()
+            && (0.0..=1.0).contains(&score)
+        {
+            signals.scores.push(("score".to_string(), score));
+            break; // Take first valid score
         }
     }
 

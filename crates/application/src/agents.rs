@@ -237,7 +237,7 @@ impl ChatBackend for MockInsightProvider {
     where
         Self: 'a;
 
-    fn chat<'a>(&'a self, _req: ChatRequest) -> Self::ChatFut<'a> {
+    fn chat(&self, _req: ChatRequest) -> Self::ChatFut<'_> {
         std::future::ready(Ok(ChatResponse {
             content: self.response.clone(),
             tool_calls: Vec::new(),
@@ -248,7 +248,7 @@ impl ChatBackend for MockInsightProvider {
                 total_tokens: 150,
             }),
             finish_reason: Some(FinishReason::Stop),
-            metadata: Default::default(),
+            metadata: std::collections::HashMap::default(),
         }))
     }
 }
@@ -482,7 +482,7 @@ impl ChatBackend for MockRiskProvider {
     where
         Self: 'a;
 
-    fn chat<'a>(&'a self, _req: ChatRequest) -> Self::ChatFut<'a> {
+    fn chat(&self, _req: ChatRequest) -> Self::ChatFut<'_> {
         std::future::ready(Ok(ChatResponse {
             content: self.response.clone(),
             tool_calls: Vec::new(),
@@ -493,7 +493,7 @@ impl ChatBackend for MockRiskProvider {
                 total_tokens: 200,
             }),
             finish_reason: Some(FinishReason::Stop),
-            metadata: Default::default(),
+            metadata: std::collections::HashMap::default(),
         }))
     }
 }

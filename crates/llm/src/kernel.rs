@@ -362,7 +362,7 @@ impl<'a, E: ChainEngine> KernelRunner<'a, E> {
 
         // Convert KernelContext.state (HashMap<String, serde_json::Value>) to StateInjection
         for (key, value) in &context.state {
-            state = self.inject_json_value(state, key, value);
+            state = Self::inject_json_value(state, key, value);
         }
 
         // Add facts as records (context from converge-core)
@@ -381,7 +381,6 @@ impl<'a, E: ChainEngine> KernelRunner<'a, E> {
 
     /// Inject a JSON value into the state injection.
     fn inject_json_value(
-        &self,
         mut state: StateInjection,
         key: &str,
         value: &serde_json::Value,
@@ -417,7 +416,7 @@ impl<'a, E: ChainEngine> KernelRunner<'a, E> {
                 // Flatten nested objects with dot notation
                 for (nested_key, nested_value) in obj {
                     let full_key = format!("{}.{}", key, nested_key);
-                    state = self.inject_json_value(state, &full_key, nested_value);
+                    state = Self::inject_json_value(state, &full_key, nested_value);
                 }
             }
             serde_json::Value::Null => {
@@ -500,7 +499,7 @@ impl<'a, E: ChainEngine> KernelRunner<'a, E> {
         all_results.append(&mut truth_results);
 
         // Build trace link
-        let trace_link = self.build_trace_link(&chain, policy);
+        let trace_link = Self::build_trace_link(&chain, policy);
 
         // Calculate confidence based on chain success and trace count
         let confidence = if chain.completed {
@@ -529,7 +528,7 @@ impl<'a, E: ChainEngine> KernelRunner<'a, E> {
     }
 
     /// Build trace link from decision chain.
-    fn build_trace_link(&self, chain: &DecisionChain, policy: &KernelPolicy) -> KernelTraceLink {
+    fn build_trace_link(chain: &DecisionChain, policy: &KernelPolicy) -> KernelTraceLink {
         // Compute trace hash from chain data
         let trace_data = format!(
             "{}:{}:{:?}",
@@ -543,15 +542,13 @@ impl<'a, E: ChainEngine> KernelRunner<'a, E> {
         let envelope_hash = chain
             .traces
             .first()
-            .map(|t| t.envelope_id.clone())
-            .unwrap_or_else(|| "no-envelope".to_string());
+            .map_or_else(|| "no-envelope".to_string(), |t| t.envelope_id.clone());
 
         // Get prompt version from first trace
         let prompt_version = chain
             .traces
             .first()
-            .map(|t| t.prompt_version.clone())
-            .unwrap_or_else(|| "unknown".to_string());
+            .map_or_else(|| "unknown".to_string(), |t| t.prompt_version.clone());
 
         // Build recall metadata if recall was used
         let recall_metadata = if policy.recall_enabled {
@@ -593,7 +590,8 @@ impl<'a, E: ChainEngine> KernelRunner<'a, E> {
 
         // Compute overall replayability from all components
         // Axiom: If any component is non-deterministic, proposal is non-deterministic
-        let (replayability, downgrade_reason) = compute_replayability(policy, &recall_metadata);
+        let (replayability, downgrade_reason) =
+            compute_replayability(policy, recall_metadata.as_ref());
 
         KernelTraceLink {
             trace_hash,
@@ -618,7 +616,7 @@ impl<'a, E: ChainEngine> KernelRunner<'a, E> {
 /// Final replayability is the **minimum** across all components.
 fn compute_replayability(
     policy: &KernelPolicy,
-    recall_metadata: &Option<ProposalRecallMetadata>,
+    recall_metadata: Option<&ProposalRecallMetadata>,
 ) -> (Replayability, Option<ReplayabilityDowngradeReason>) {
     let mut downgrade_reasons = Vec::new();
 
