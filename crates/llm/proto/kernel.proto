@@ -1,0 +1,332 @@
+// Copyright (c) 2026 Aprio One AB
+// Author: Kenneth Pernyer, kenneth@pernyer.se
+// SPDX-License-Identifier: LicenseRef-Proprietary
+
+syntax = "proto3";
+
+package converge.llm.v1;
+
+import "google/protobuf/struct.proto";
+
+// KernelService exposes the converge-llm reasoning kernel over gRPC.
+//
+// This is a standalone service deployed on GPU VMs, separate from
+// converge-runtime's ConvergeService. GPU/CUDA dependencies stay
+// isolated from the serverless runtime.
+service KernelService {
+  // RunKernel — unary RPC mapping to run_kernel(engine, intent, context, policy).
+  // Used by agents in provider mode (3-step reasoning chain).
+  rpc RunKernel(RunKernelRequest) returns (RunKernelResponse);
+
+  // StreamGenerate — server-streaming RPC for coding agent mode.
+  // Token-by-token generation with multi-turn chat history and tool support.
+  // Client-side tool execution loop: server detects tool syntax, client executes.
+  rpc StreamGenerate(StreamGenerateRequest) returns (stream GenerateChunk);
+
+  // Adapter lifecycle management (LoRA).
+  rpc LoadAdapter(LoadAdapterRequest) returns (LoadAdapterResponse);
+  rpc DetachAdapter(DetachAdapterRequest) returns (DetachAdapterResponse);
+  rpc ListAdapters(ListAdaptersRequest) returns (ListAdaptersResponse);
+
+  // Health check with GPU status and model readiness.
+  rpc GetHealth(GetHealthRequest) returns (GetHealthResponse);
+}
+
+// ============================================================================
+// RunKernel — Maps to run_kernel(engine, intent, context, policy)
+// ============================================================================
+
+message RunKernelRequest {
+  KernelIntent intent = 1;
+  KernelContext context = 2;
+  KernelPolicy policy = 3;
+}
+
+message RunKernelResponse {
+  repeated KernelProposal proposals = 1;
+  // Total generation time across all chain steps
+  uint64 generation_time_ms = 2;
+}
+
+// ============================================================================
+// Kernel Boundary Types (from converge-core::kernel_boundary)
+// ============================================================================
+
+message KernelIntent {
+  string task = 1;
+  repeated string criteria = 2;
+  uint64 max_tokens = 3;
+}
+
+message KernelContext {
+  // Structured state data (from Seeds, Signals, etc.)
+  map<string, google.protobuf.Value> state = 1;
+  // Relevant facts from context (read-only view)
+  repeated ContextFact facts = 2;
+  // Tenant/session identifier for recall scoping
+  optional string tenant_id = 3;
+}
+
+message ContextFact {
+  string key = 1;
+  string id = 2;
+  string content = 3;
+}
+
+message KernelPolicy {
+  optional string adapter_id = 1;
+  bool recall_enabled = 2;
+  uint64 recall_max_candidates = 3;
+  float recall_min_score = 4;
+  optional uint64 seed = 5;
+  bool requires_human = 6;
+  repeated string required_truths = 7;
+}
+
+// ============================================================================
+// Kernel Output Types
+// ============================================================================
+
+message KernelProposal {
+  string id = 1;
+  ProposalKind kind = 2;
+  string payload = 3;
+  optional google.protobuf.Struct structured_payload = 4;
+  KernelTraceLink trace_link = 5;
+  repeated ContractResult contract_results = 6;
+  bool requires_human = 7;
+  optional float confidence = 8;
+}
+
+enum ProposalKind {
+  PROPOSAL_KIND_UNSPECIFIED = 0;
+  PROPOSAL_KIND_CLAIMS = 1;
+  PROPOSAL_KIND_PLAN = 2;
+  PROPOSAL_KIND_CLASSIFICATION = 3;
+  PROPOSAL_KIND_EVALUATION = 4;
+  PROPOSAL_KIND_DRAFT_DOCUMENT = 5;
+  PROPOSAL_KIND_REASONING = 6;
+}
+
+message KernelTraceLink {
+  string trace_hash = 1;
+  string prompt_version = 2;
+  string envelope_hash = 3;
+  optional string adapter_id = 4;
+  optional ProposalRecallMetadata recall_metadata = 5;
+  Replayability replayability = 6;
+  optional ReplayabilityDowngradeReason replayability_downgrade_reason = 7;
+}
+
+message ProposalRecallMetadata {
+  uint64 candidates_retrieved = 1;
+  uint64 candidates_used = 2;
+  string corpus_fingerprint = 3;
+  repeated string record_ids = 4;
+  string query_hash = 5;
+  string embedding_hash = 6;
+  RecallImpact impact = 7;
+  bool embedder_deterministic = 8;
+  bool corpus_content_addressed = 9;
+}
+
+enum Replayability {
+  REPLAYABILITY_UNSPECIFIED = 0;
+  REPLAYABILITY_DETERMINISTIC = 1;
+  REPLAYABILITY_BEST_EFFORT = 2;
+  REPLAYABILITY_NONE = 3;
+}
+
+enum ReplayabilityDowngradeReason {
+  REPLAYABILITY_DOWNGRADE_REASON_UNSPECIFIED = 0;
+  REPLAYABILITY_DOWNGRADE_REASON_RECALL_EMBEDDER_NOT_DETERMINISTIC = 1;
+  REPLAYABILITY_DOWNGRADE_REASON_RECALL_CORPUS_NOT_CONTENT_ADDRESSED = 2;
+  REPLAYABILITY_DOWNGRADE_REASON_REMOTE_BACKEND_USED = 3;
+  REPLAYABILITY_DOWNGRADE_REASON_NO_SEED_PROVIDED = 4;
+  REPLAYABILITY_DOWNGRADE_REASON_MULTIPLE_REASONS = 5;
+}
+
+enum RecallImpact {
+  RECALL_IMPACT_UNSPECIFIED = 0;
+  RECALL_IMPACT_NONE = 1;
+  RECALL_IMPACT_UNKNOWN = 2;
+  RECALL_IMPACT_REDUCED_ITERATIONS = 3;
+  RECALL_IMPACT_REDUCED_VALIDATION_FAILURES = 4;
+  RECALL_IMPACT_PROVIDED_CONTEXT = 5;
+}
+
+message ContractResult {
+  string name = 1;
+  bool passed = 2;
+  optional string failure_reason = 3;
+}
+
+// ============================================================================
+// StreamGenerate — Coding Agent Mode
+// ============================================================================
+
+message StreamGenerateRequest {
+  // Multi-turn chat history
+  repeated ChatMessage messages = 1;
+  // Generation parameters
+  GenerationParams params = 2;
+  // Tool definitions available to the model
+  repeated ToolDefinition tools = 3;
+  // System prompt override (optional)
+  optional string system_prompt = 4;
+}
+
+message ChatMessage {
+  ChatRole role = 1;
+  string content = 2;
+  // For tool results: which tool call this responds to
+  optional string tool_call_id = 3;
+}
+
+enum ChatRole {
+  CHAT_ROLE_UNSPECIFIED = 0;
+  CHAT_ROLE_SYSTEM = 1;
+  CHAT_ROLE_USER = 2;
+  CHAT_ROLE_ASSISTANT = 3;
+  CHAT_ROLE_TOOL = 4;
+}
+
+message GenerationParams {
+  uint64 max_new_tokens = 1;
+  float temperature = 2;
+  float top_p = 3;
+  uint64 top_k = 4;
+  float repetition_penalty = 5;
+  repeated string stop_sequences = 6;
+  optional uint64 seed = 7;
+}
+
+message ToolDefinition {
+  string name = 1;
+  string description = 2;
+  // JSON Schema for the tool's parameters
+  google.protobuf.Struct parameters_schema = 3;
+}
+
+// Server-streaming response chunks
+message GenerateChunk {
+  oneof chunk {
+    TokenChunk token = 1;
+    ToolCallChunk tool_call = 2;
+    FinishChunk finish = 3;
+    ErrorChunk error = 4;
+  }
+}
+
+message TokenChunk {
+  string text = 1;
+  // Running token index in this generation
+  uint64 token_index = 2;
+}
+
+message ToolCallChunk {
+  string call_id = 1;
+  string tool_name = 2;
+  // JSON-encoded arguments
+  string arguments_json = 3;
+}
+
+message FinishChunk {
+  FinishReason reason = 1;
+  uint64 input_tokens = 2;
+  uint64 output_tokens = 3;
+  // Full generated text (for convenience)
+  string full_text = 4;
+}
+
+enum FinishReason {
+  FINISH_REASON_UNSPECIFIED = 0;
+  FINISH_REASON_LENGTH = 1;
+  FINISH_REASON_EOS = 2;
+  FINISH_REASON_STOP_SEQUENCE = 3;
+  FINISH_REASON_TOOL_CALL = 4;
+}
+
+message ErrorChunk {
+  string message = 1;
+  ErrorKind kind = 2;
+}
+
+enum ErrorKind {
+  ERROR_KIND_UNSPECIFIED = 0;
+  ERROR_KIND_MODEL_NOT_LOADED = 1;
+  ERROR_KIND_CONTEXT_LENGTH_EXCEEDED = 2;
+  ERROR_KIND_INFERENCE_FAILED = 3;
+  ERROR_KIND_INVALID_PARAMS = 4;
+}
+
+// ============================================================================
+// Adapter Management (LoRA)
+// ============================================================================
+
+message LoadAdapterRequest {
+  string adapter_id = 1;
+}
+
+message LoadAdapterResponse {
+  bool success = 1;
+  optional string error = 2;
+  AdapterLifecycleState state = 3;
+}
+
+message DetachAdapterRequest {}
+
+message DetachAdapterResponse {
+  bool success = 1;
+  optional string error = 2;
+}
+
+message ListAdaptersRequest {}
+
+message ListAdaptersResponse {
+  optional AdapterInfo current = 1;
+  AdapterLifecycleState lifecycle_state = 2;
+}
+
+message AdapterInfo {
+  string adapter_id = 1;
+  bool merged = 2;
+}
+
+enum AdapterLifecycleState {
+  ADAPTER_LIFECYCLE_STATE_UNSPECIFIED = 0;
+  ADAPTER_LIFECYCLE_STATE_DETACHED = 1;
+  ADAPTER_LIFECYCLE_STATE_LOADING = 2;
+  ADAPTER_LIFECYCLE_STATE_ATTACHED = 3;
+  ADAPTER_LIFECYCLE_STATE_DETACHING = 4;
+}
+
+// ============================================================================
+// Health Check
+// ============================================================================
+
+message GetHealthRequest {}
+
+message GetHealthResponse {
+  bool ready = 1;
+  ModelStatus model_status = 2;
+  optional GpuInfo gpu_info = 3;
+  uint64 uptime_seconds = 4;
+  string backend_name = 5;
+  string model_family = 6;
+  uint64 max_seq_len = 7;
+}
+
+enum ModelStatus {
+  MODEL_STATUS_UNSPECIFIED = 0;
+  MODEL_STATUS_LOADING = 1;
+  MODEL_STATUS_READY = 2;
+  MODEL_STATUS_ERROR = 3;
+}
+
+message GpuInfo {
+  string device_name = 1;
+  uint64 total_memory_mb = 2;
+  uint64 used_memory_mb = 3;
+  float utilization_percent = 4;
+}

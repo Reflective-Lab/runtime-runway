@@ -1,0 +1,72 @@
+[package]
+name = "converge-application"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license = "LicenseRef-Proprietary"
+publish = false
+description = "Converge distribution - packages domain packs, providers, and runtime into a deployable product"
+documentation = "https://docs.rs/converge-application"
+keywords = ["converge", "distribution", "packaging", "agentic", "workflow"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "converge"
+path = "src/main.rs"
+
+[dependencies]
+converge-core.workspace = true
+converge-experience.workspace = true
+converge-provider.workspace = true
+async-trait.workspace = true
+
+# Optional subsystems
+converge-knowledge = { workspace = true, optional = true }
+converge-llm = { workspace = true, optional = true }
+converge-analytics = { workspace = true, optional = true }
+converge-optimization = { workspace = true, optional = true }
+
+# TUI (optional)
+ratatui = { workspace = true, optional = true }
+crossterm = { workspace = true, optional = true }
+
+# CLI
+clap.workspace = true
+
+# Async runtime
+tokio.workspace = true
+
+# Configuration
+config.workspace = true
+dotenv.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+strum.workspace = true
+
+# Date/time
+chrono.workspace = true
+
+# Observability
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# Error handling
+thiserror.workspace = true
+anyhow.workspace = true
+uuid.workspace = true
+hostname.workspace = true
+
+[features]
+default = ["tui"]
+tui = ["dep:ratatui", "dep:crossterm"]
+knowledge = ["dep:converge-knowledge"]
+llm = ["dep:converge-llm"]
+analytics = ["dep:converge-analytics"]
+optimization = ["dep:converge-optimization"]
+full = ["tui", "knowledge", "llm", "analytics", "optimization"]
+
+[lints]
+workspace = true

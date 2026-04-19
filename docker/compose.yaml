@@ -1,0 +1,38 @@
+services:
+  converge-runtime:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CONVERGE_RUNTIME_FEATURES: "${CONVERGE_RUNTIME_FEATURES:-gcp,auth,firebase}"
+    image: converge-runtime:dev
+    container_name: converge-runtime
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      PORT: "8080"
+      RUST_LOG: "${RUST_LOG:-info}"
+      LOCAL_DEV: "${LOCAL_DEV:-true}"
+      GCP_PROJECT_ID: "${GCP_PROJECT_ID:-local-project}"
+      GOOGLE_CLOUD_PROJECT: "${GOOGLE_CLOUD_PROJECT:-local-project}"
+      FIREBASE_PROJECT_ID: "${FIREBASE_PROJECT_ID:-local-project}"
+      FIREBASE_AUTH_EMULATOR_HOST: "${FIREBASE_AUTH_EMULATOR_HOST:-}"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  nats:
+    image: nats:2.10-alpine
+    profiles: ["extras"]
+    ports:
+      - "4222:4222"
+
+  surrealdb:
+    image: surrealdb/surrealdb:latest
+    profiles: ["extras"]
+    command: ["start", "--log", "info", "--user", "root", "--pass", "root", "memory"]
+    ports:
+      - "8000:8000"

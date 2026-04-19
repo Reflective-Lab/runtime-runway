@@ -1,0 +1,10 @@
+[package]
+name = "example-gemma-inference"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+converge-llm = { path = "../", default-features = false, features = ["gemma"] }
+tracing-subscriber = "0.3"
+tracing = "0.1"

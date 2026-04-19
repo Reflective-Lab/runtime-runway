@@ -1,0 +1,137 @@
+[package]
+name = "converge-llm"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license = "LicenseRef-Proprietary"
+publish = false
+description = "LLM inference and training for Converge agents using Burn and llama.cpp"
+documentation = "https://docs.rs/converge-llm"
+keywords = ["llm", "agent", "burn", "llama", "gguf"]
+categories = ["machine-learning", "text-processing"]
+
+[dependencies]
+# Burn framework
+burn.workspace = true
+
+# Burn store for weight manipulation (import feature)
+burn-store = { workspace = true, optional = true }
+
+# Llama implementation from tracel-ai (optional)
+llama-burn = { workspace = true, optional = true }
+
+# In-process GGUF inference for Gemma on laptops
+llama-cpp-2 = { workspace = true, optional = true }
+encoding_rs = { workspace = true, optional = true }
+
+# Tokenization
+tiktoken-rs.workspace = true
+
+# Core utilities
+anyhow.workspace = true
+thiserror.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+tracing.workspace = true
+rand.workspace = true
+chrono.workspace = true
+
+# Recall feature dependencies
+blake3.workspace = true
+regex.workspace = true
+once_cell.workspace = true
+
+# Semantic embedding (optional, for real recall)
+fastembed = { workspace = true, optional = true }
+
+# HTTP client for remote backends
+reqwest = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
+
+# gRPC server/client (feature-gated)
+tonic = { workspace = true, optional = true }
+prost = { workspace = true, optional = true }
+prost-types = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+tokio-stream = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, optional = true }
+
+# Converge platform dependencies
+converge-core.workspace = true
+converge-domain.workspace = true
+converge-provider = { workspace = true, optional = true }
+
+# Object storage (optional)
+converge-storage = { workspace = true, optional = true, features = ["local"] }
+
+[build-dependencies]
+tonic-build = { workspace = true, optional = true }
+
+[dev-dependencies]
+proptest.workspace = true
+tempfile.workspace = true
+tracing-test = "0.2"
+tracing-subscriber.workspace = true
+tokio.workspace = true
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[features]
+default = ["ndarray", "llama3", "import"]
+# Recall capability
+recall = []
+# Semantic embedding with ONNX models
+semantic-embedding = ["dep:fastembed"]
+# Persistent recall storage
+persistent-recall = []
+# Backends
+ndarray = ["burn/ndarray"]
+wgpu = ["burn/wgpu"]
+cuda = ["dep:llama-burn", "llama-burn/cuda"]
+vulkan = ["dep:llama-burn", "llama-burn/vulkan"]
+tch-cpu = ["dep:llama-burn", "llama-burn/tch-cpu"]
+tch-gpu = ["dep:llama-burn", "llama-burn/tch-gpu"]
+# Model variants
+llama3 = ["dep:llama-burn", "llama-burn/llama3"]
+tiny = ["dep:llama-burn", "llama-burn/tiny"]
+gemma = ["dep:llama-cpp-2", "dep:encoding_rs"]
+# Training support
+lora = ["dep:llama-burn"]
+# Import weights from other formats
+import = ["dep:llama-burn", "llama-burn/import", "dep:burn-store"]
+pretrained = ["dep:llama-burn", "llama-burn/pretrained"]
+# Object storage for remote adapter registry
+storage = ["dep:converge-storage"]
+# Remote backend providers
+anthropic = ["dep:converge-provider"]
+# gRPC server
+server = ["dep:tonic", "dep:prost", "dep:prost-types", "dep:tokio",
+          "dep:tokio-stream", "dep:futures", "dep:tonic-build",
+          "dep:tracing-subscriber"]
+# gRPC client
+grpc-client = ["dep:tonic", "dep:prost", "dep:prost-types", "dep:tokio",
+               "dep:tonic-build"]
+
+[[bin]]
+name = "converge-llm-server"
+path = "src/bin/server.rs"
+required-features = ["server"]
+
+[[example]]
+name = "inference_agent"
+
+[[example]]
+name = "golden_test"
+
+[[example]]
+name = "local_inference"
+
+[[bench]]
+name = "recall_benchmarks"
+harness = false
+
+[lints]
+workspace = true

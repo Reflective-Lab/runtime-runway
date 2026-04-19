@@ -1,0 +1,20 @@
+[package]
+name = "example-local-inference"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+converge-llm = { path = "../", default-features = false }
+burn = { version = "0.20.0", features = ["ndarray"] }
+tracing-subscriber = "0.3"
+tracing = "0.1"
+
+[features]
+default = ["gemma"]
+ndarray = ["converge-llm/ndarray"]
+wgpu = ["converge-llm/wgpu"]
+llama3 = ["converge-llm/llama3"]
+tiny = ["converge-llm/tiny"]
+pretrained = ["converge-llm/pretrained"]
+gemma = ["converge-llm/gemma"]
