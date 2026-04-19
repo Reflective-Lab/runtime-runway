@@ -2,3 +2,27 @@ target/
 .env
 .DS_Store
 *.swp
+*.swo
+*~
+
+# Editor
+.idea/
+.vscode/
+*.iml
+
+# Claude Code local settings (not shared)
+.claude/settings.local.json
+
+# OS
+Thumbs.db
+
+# Rust
+**/*.rs.bk
+Cargo.lock
+
+# Model weights and artifacts
+*.gguf
+*.safetensors
+*.bin
+*.pt
+*.onnx

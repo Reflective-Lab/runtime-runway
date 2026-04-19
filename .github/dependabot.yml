@@ -1,0 +1,4 @@
+# Dependency updates are managed manually.
+# Re-enable when CI is stable and breaking updates can be reviewed.
+version: 2
+updates: []

@@ -3,6 +3,7 @@
 Distribution, deployment, and infrastructure for the Converge stack.
 
 > See `~/CLAUDE.md` and `~/dev/CLAUDE.md` for global conventions.
+> Read and follow `AGENTS.md` for the full agent contract.
 
 ## What belongs here
 
@@ -22,8 +23,17 @@ Distribution, deployment, and infrastructure for the Converge stack.
 Runway depends on Converge crates via path (`../converge/crates/...`).
 Both repos must be checked out as siblings under `~/dev/work/`.
 
+## Session scope
+
+- **Milestones:** `MILESTONES.md` (when it exists)
+- **Changelog:** `kb/History/CHANGELOG.md`
+- **Strategic context:** `~/dev/work/EPIC.md`
+
 ## Rules
 
 - Run `just lint` before considering work done
 - Never push to main without confirmation
 - Never commit secrets, .env files, or credentials
+- Skills are available in `.claude/skills/` — use `/help` to see them
+- KB lives in `kb/` — update it when architecture or process changes
+- Root directory stays clean: docs at root, knowledge in `kb/`, source in `crates/`

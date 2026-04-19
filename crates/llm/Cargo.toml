@@ -90,10 +90,7 @@ persistent-recall = []
 # Backends
 ndarray = ["burn/ndarray"]
 wgpu = ["burn/wgpu"]
-cuda = ["dep:llama-burn", "llama-burn/cuda"]
-vulkan = ["dep:llama-burn", "llama-burn/vulkan"]
-tch-cpu = ["dep:llama-burn", "llama-burn/tch-cpu"]
-tch-gpu = ["dep:llama-burn", "llama-burn/tch-gpu"]
+# cuda, vulkan, tch-cpu, tch-gpu removed — llama-burn upstream dropped these features
 # Model variants
 llama3 = ["dep:llama-burn", "llama-burn/llama3"]
 tiny = ["dep:llama-burn", "llama-burn/tiny"]

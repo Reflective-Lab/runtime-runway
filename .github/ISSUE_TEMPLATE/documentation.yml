@@ -1,0 +1,42 @@
+name: Documentation Request
+description: Request improvements or additions to documentation
+title: "[Docs]: "
+labels: ["documentation", "triage"]
+assignees: ""
+body:
+  - type: markdown
+    attributes:
+      value: "Thank you for helping improve our documentation!"
+  - type: textarea
+    id: missing-docs
+    attributes:
+      label: What documentation is missing or unclear?
+      description: Please describe what you were trying to learn or accomplish
+      placeholder: I was trying to understand how to... but couldn't find information about...
+    validations:
+      required: true
+  - type: textarea
+    id: suggested-improvement
+    attributes:
+      label: Suggested improvement
+      description: How could we make this clearer?
+      placeholder: The documentation should include...
+  - type: dropdown
+    id: documentation-type
+    attributes:
+      label: What type of documentation?
+      options:
+        - Deployment Guide
+        - Configuration
+        - Architecture
+        - GPU Setup
+        - Docker
+        - Examples
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Any other information that would help us improve the documentation
