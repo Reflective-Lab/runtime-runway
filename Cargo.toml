@@ -9,9 +9,8 @@ members = [
 version = "3.4.1"
 edition = "2024"
 rust-version = "1.94.0"
-license = "LicenseRef-Proprietary"
+license = "MIT"
 repository = "https://github.com/Reflective-Lab/runway"
-publish = false
 
 [workspace.dependencies]
 # Converge crates — pinned to a specific GitHub release tag by default.
