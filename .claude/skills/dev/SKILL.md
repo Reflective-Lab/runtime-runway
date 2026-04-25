@@ -1,5 +1,6 @@
 ---
 name: dev
+model: sonnet
 description: Start local development environment.
 user-invocable: true
 argument-hint: [native|docker]

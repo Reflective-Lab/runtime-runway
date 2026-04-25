@@ -36,3 +36,28 @@ services:
     command: ["start", "--log", "info", "--user", "root", "--pass", "root", "memory"]
     ports:
       - "8000:8000"
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["llm"]
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama:/root/.ollama
+    environment:
+      # Pick any tag that `ollama pull` supports, e.g. qwen2.5:32b-instruct, qwen2.5-coder:32b, qwen2.5:14b-instruct
+      OLLAMA_MODEL: "${OLLAMA_MODEL:-qwen2.5:14b-instruct}"
+      OLLAMA_HOST: "0.0.0.0:11434"
+    entrypoint: ["/bin/sh", "-lc"]
+    command:
+      - |
+        ollama serve &
+        for i in $(seq 1 60); do
+          ollama list >/dev/null 2>&1 && break
+          sleep 0.2
+        done
+        ollama pull "$${OLLAMA_MODEL}"
+        wait
+
+volumes:
+  ollama:
