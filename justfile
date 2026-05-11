@@ -150,9 +150,23 @@ api-docker-build:
 api-docker-run:
     docker run --rm -p 8080:8080 -e LOCAL_DEV=true -e STORAGE_PATH=/tmp/api-server api-server:dev
 
-# Deploy api-server to Cloud Run
+# Deploy api-server to Cloud Run (tags revision with version + SHA)
 api-deploy:
     SERVICE_NAME=api-server IMAGE_NAME=api-server bash ops/scripts/deploy-api-server.sh
+
+# Freeze the current api-server as a named major-version service.
+# Adds apps.reflective.se/api-server/v{N}/** routing alongside the rolling latest.
+# Usage: just api-freeze 3
+api-freeze major:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    SERVICE_NAME=api-server-v{{major}} \
+    ROUTE_PREFIX=/api-server/v{{major}} \
+    bash ops/scripts/deploy-api-server.sh
+    echo ""
+    echo "Add this block to ops/infra/firebase/apps/firebase.json rewrites (BEFORE the /api-server/** catch-all):"
+    echo '  { "source": "/api-server/v{{major}}/**", "run": { "serviceId": "api-server-v{{major}}", "region": "europe-west1", "projectId": "wolfgang-kb-prod" } }'
+    echo "Then: just apps-deploy"
 
 # Deploy Firebase Hosting for apps.reflective.se
 apps-deploy:
