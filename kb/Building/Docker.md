@@ -21,7 +21,7 @@ Two-stage build:
 Build arg: `CONVERGE_RUNTIME_FEATURES` controls which features are compiled in.
 
 The Dockerfile expects the Converge repo root as its build context.
-`docker/compose.yaml` points there by default with `CONVERGE_ROOT=../../converge`, and `ops/scripts/dev-up.sh` sets absolute paths automatically.
+`docker/compose.yaml` points there by default with `CONVERGE_ROOT=../../reflective/stack/bedrock-platform/converge`, and `ops/scripts/dev-up.sh` sets absolute paths automatically.
 
 ## Compose services
 
@@ -35,7 +35,7 @@ SurrealDB runs in-memory mode with `root:root` credentials (dev only).
 
 ## Known issues
 
-- Runtime image builds still require a sibling `../converge` checkout or an explicit `CONVERGE_ROOT`
+- Runtime image builds still require `~/dev/reflective/stack/bedrock-platform/converge` or an explicit `CONVERGE_ROOT`
 - No GPU-enabled Dockerfile for local dev (GPU Dockerfiles live in `ops/deploy/gpu/`)
 
 See also: [[Building/Deployment]]

@@ -21,6 +21,18 @@ Thumbs.db
 Cargo.lock
 .cargo/config.toml
 
+# Terraform
+ops/infra/terraform/.terraform/
+ops/infra/terraform/.terraform.lock.hcl
+ops/infra/terraform/*.tfstate
+ops/infra/terraform/*.tfstate.backup
+ops/infra/terraform/*.tfvars
+ops/infra/terraform/crash.log
+ops/infra/terraform/override.tf
+
+# Firebase
+ops/infra/firebase/.firebaserc
+
 # Model weights and artifacts
 *.gguf
 *.safetensors

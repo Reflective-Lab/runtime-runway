@@ -3,6 +3,11 @@ resolver = "2"
 members = [
     "crates/application",
     "crates/llm",
+    "crates/runway-auth",
+    "crates/runway-middleware",
+    "crates/runway-secrets",
+    "crates/runway-storage",
+    "crates/runway-telemetry",
 ]
 
 [workspace.package]
@@ -35,10 +40,26 @@ converge-storage = { git = "https://github.com/Reflective-Lab/converge", tag = "
 # Internal
 converge-llm = { path = "crates/llm" }
 converge-application = { path = "crates/application" }
+runway-auth = { path = "crates/runway-auth" }
+runway-middleware = { path = "crates/runway-middleware" }
+runway-secrets = { path = "crates/runway-secrets" }
+runway-storage = { path = "crates/runway-storage" }
+runway-telemetry = { path = "crates/runway-telemetry" }
 
 # Shared dependencies (versions aligned with converge workspace)
 anyhow = "1"
 async-trait = "0.1"
+axum = { version = "0.7", features = ["json", "macros"] }
+opentelemetry = { version = "0.23", features = ["trace", "metrics"] }
+opentelemetry-otlp = { version = "0.16", features = ["http-proto", "reqwest-client", "tls"] }
+opentelemetry_sdk = { version = "0.23", features = ["rt-tokio", "trace"] }
+secrecy = { version = "0.8", features = ["serde"] }
+sentry = { version = "0.33", features = ["tracing", "tower", "tower-axum-matched-path"] }
+redb = "2"
+tower = { version = "0.4", features = ["util"] }
+tower-http = { version = "0.5", features = ["request-id", "trace", "cors", "compression-gzip"] }
+tracing-opentelemetry = "0.24"
+zeroize = { version = "1", features = ["derive"] }
 blake3 = "1.5"
 burn = { version = "0.20.0", features = ["ndarray", "train"] }
 burn-store = { version = "0.20.0" }

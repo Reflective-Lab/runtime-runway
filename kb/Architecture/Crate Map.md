@@ -3,7 +3,7 @@ source: llm
 ---
 # Crate Map
 
-Runway hosts crates that were split from converge on 2026-04-19. Both are proprietary and unpublished.
+Runway hosts two categories of crates: Converge distribution crates (application and LLM) and the shared infrastructure crates (`runway-*`). The runway-* crates have no Converge dependency — they are standalone infra primitives reused by all Reflective apps.
 
 ## Crates
 
@@ -11,18 +11,27 @@ Runway hosts crates that were split from converge on 2026-04-19. Both are propri
 converge-application     → converge-core, converge-experience,    CLI/TUI distribution
                            converge-provider + optional subsystems
 converge-llm             → converge-core, converge-domain          Local LLM inference (Burn)
+
+runway-storage           → redb, reqwest, fastembed, serde_json    StorageKit: DocumentStore +
+                                                                    VectorStore + ObjectStore +
+                                                                    EventLog + EmbeddingProvider
+runway-auth              → reqwest, axum, tower                    Firebase Auth Tower middleware
+runway-middleware        → axum, tower-http                        Request-id, trace, CORS, compression
+runway-secrets           → reqwest, secrecy, zeroize               GCP Secret Manager client
+runway-telemetry         → opentelemetry, sentry, tracing          OTel → Cloud Trace + Sentry
 ```
 
 ## Dependency direction
 
 ```
-runway/crates/application  ──→  converge/crates/{core, experience, provider, ...}
-runway/crates/llm          ──→  converge/crates/{core, domain, provider, storage}
+reflective/runway/crates/application  ──→  converge/crates/{core, experience, provider, ...}
+reflective/runway/crates/llm          ──→  converge/crates/{core, domain, provider, storage}
+reflective/runway/crates/runway-*     ──→  (no converge dependency)
 ```
 
 Runway pins Converge dependencies to Git tag `v3.4.0` by default.
-For local SDK work, copy `.cargo/config.toml.example` to `.cargo/config.toml` or run `just use-local-converge` to patch to sibling `../converge`.
-Both repos should still be siblings under `~/dev/work/` for that local mode and for runtime packaging.
+For local SDK work, copy `.cargo/config.toml.example` to `.cargo/config.toml` or run `just use-local-converge` to patch to `../reflective/stack/bedrock-platform/converge`.
+Runtime packaging expects Converge at `~/dev/reflective/stack/bedrock-platform/converge` unless `CONVERGE_ROOT` overrides it.
 
 ## converge-llm engines
 

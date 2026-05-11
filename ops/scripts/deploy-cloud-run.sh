@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CONVERGE_ROOT="${CONVERGE_ROOT:-$ROOT_DIR/../converge}"
+CONVERGE_ROOT="${CONVERGE_ROOT:-$ROOT_DIR/../stack/bedrock-platform/converge}"
 PROJECT_ID="${PROJECT_ID:-${GOOGLE_CLOUD_PROJECT:-}}"
 REGION="${REGION:-europe-west1}"
 SERVICE_NAME="${SERVICE_NAME:-converge-runtime}"
@@ -21,7 +21,7 @@ command -v gcloud >/dev/null 2>&1 || {
 }
 [[ -f "$CONVERGE_ROOT/Cargo.toml" ]] || {
   echo "Converge source not found at $CONVERGE_ROOT" >&2
-  echo "Set CONVERGE_ROOT or check out ../converge next to runway." >&2
+  echo "Set CONVERGE_ROOT or check out ~/dev/reflective/stack/bedrock-platform/converge." >&2
   exit 1
 }
 

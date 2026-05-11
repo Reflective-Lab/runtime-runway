@@ -1,0 +1,29 @@
+[package]
+name = "runway-storage"
+description = "Shared storage abstraction for Runway apps — local (SQLite + LanceDB) and remote (Firestore + GCS + Vertex AI)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+bytes = "1"
+chrono = { workspace = true }
+fastembed = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+redb = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+urlencoding = "2"
+uuid = { workspace = true }
+zeroize = { workspace = true }
+
+[features]
+default = ["local", "remote"]
+local  = []
+remote = []

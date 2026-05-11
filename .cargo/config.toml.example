@@ -1,9 +1,9 @@
 [patch."https://github.com/Reflective-Lab/converge"]
-converge-core = { path = "../converge/crates/core" }
-converge-provider = { path = "../converge/crates/provider" }
-converge-domain = { path = "../converge/crates/domain" }
-converge-experience = { path = "../converge/crates/experience" }
-converge-knowledge = { path = "../converge/crates/knowledge" }
-converge-optimization = { path = "../converge/crates/optimization" }
-converge-analytics = { path = "../converge/crates/analytics" }
-converge-storage = { path = "../converge/crates/storage" }
+converge-core = { path = "../reflective-stack/bedrock-platform/converge/crates/core" }
+converge-provider = { path = "../reflective-stack/bedrock-platform/converge/crates/provider" }
+converge-domain = { path = "../reflective-stack/bedrock-platform/converge/crates/domain" }
+converge-experience = { path = "../reflective-stack/bedrock-platform/converge/crates/experience" }
+converge-knowledge = { path = "../reflective-stack/bedrock-platform/converge/crates/knowledge" }
+converge-optimization = { path = "../reflective-stack/bedrock-platform/converge/crates/optimization" }
+converge-analytics = { path = "../reflective-stack/bedrock-platform/converge/crates/analytics" }
+converge-storage = { path = "../reflective-stack/bedrock-platform/converge/crates/storage" }

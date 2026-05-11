@@ -4,29 +4,69 @@ Distribution, deployment, and infrastructure for the [Converge](https://github.c
 
 Runway owns everything needed to **run, package, and deploy** Converge. The SDK stays pure; Runway handles the messy reality of binaries, containers, GPUs, and cloud services.
 
+## A New World
+
+The old world shipped instructions; the new world ships intent-driven, governed runtimes. Models and orchestration turn declared intent into decisions at runtime — but only if the runtime, the providers, the GPUs, and the deployment surface actually exist in the messy real world. Runway owns that messy world.
+
+**Why it matters.** A doctrine of safe runtime intent resolution requires a runtime that can actually be deployed, run, and reasoned about on real hardware. Runway is the boundary between the pure SDK upstairs and the binaries, containers, and GPUs that make the rest of the stack real.
+
 ## Architecture
 
 ```
-runway/
+reflective/runway/
   crates/
-    application/    The `converge` CLI/TUI binary
-    llm/            Local LLM inference (Burn, llama.cpp)
-  docker/           Container definitions (Dockerfile, compose)
+    application/        The `converge` CLI/TUI binary
+    llm/                Local LLM inference (Burn, llama.cpp)
+    runway-auth/        Firebase Auth middleware (Tower Layer)
+    runway-middleware/  Axum request-id, trace, CORS, compression stack
+    runway-secrets/     GCP Secret Manager client (SecretString, zeroized)
+    runway-storage/     StorageKit — DocumentStore, VectorStore, ObjectStore, EventLog, EmbeddingProvider
+    runway-telemetry/   OTel → Cloud Trace, Sentry, JSON logging
+  docker/               Container definitions (Dockerfile, compose)
   ops/
-    deploy/         GPU deployment (Cloud Run, RunPod, Modal)
-    scripts/        Dev lifecycle scripts
+    infra/terraform/    GCP Terraform modules (Firestore, GCS, Vertex AI, Pub/Sub, etc.)
+    infra/firebase/     Firestore security rules and indexes
+    deploy/             GPU deployment (Cloud Run, RunPod, Modal)
+    scripts/            Dev lifecycle scripts
 ```
+
+### Two Runtime Modes — Same Code
+
+The `runway-storage` crate's `StorageKit` is the central hinge:
+
+```
+StorageKit::local(base_path)   →  redb + file vectors + local FS   (Tauri offline)
+StorageKit::remote(config)     →  Firestore + GCS + Vertex AI       (Cloud Run)
+```
+
+Apps call `StorageKit::local()` or `StorageKit::remote()` at startup. All Converge loops,
+Suggestors, and domain logic receive a `StorageKit` and never care which backend is live.
+
+### GCP Stack
+
+| Service | Purpose |
+|---------|---------|
+| Firestore | Document store — multi-tenant `orgs/{orgId}/apps/{appId}/...` hierarchy |
+| Cloud Storage | Object store — binaries, assets, model weights |
+| Vertex AI Matching Engine | ANN vector search at cloud scale (768-dim embeddings) |
+| Vertex AI `text-multilingual-embedding-002` | Embeddings (multilingual, 768-dim) |
+| Cloud Pub/Sub | Event ingestion pipeline, feed processing |
+| BigQuery | Analytics — `learning_episodes` + `experience_events` |
+| Cloud Spanner | Multi-region ACID for billing and governance |
+| Memorystore (Redis) | Distributed locks, rate limiting, sessions |
+| Secret Manager | All secrets: API keys, signing certs, Stripe webhook keys |
 
 ### Dependency Direction
 
 Runway **consumes** Converge crates via path — never the reverse.
 
 ```
-runway/crates/application  ──>  converge/crates/{core, experience, provider, ...}
-runway/crates/llm          ──>  converge/crates/{core, domain, provider, storage}
+reflective/runway/crates/application  ──>  converge/crates/{core, experience, provider, ...}
+reflective/runway/crates/llm          ──>  converge/crates/{core, domain, provider, storage}
+reflective/runway/crates/runway-*     ──>  (no converge dependency — standalone infra crates)
 ```
 
-Both repos must be checked out as siblings under `~/dev/work/`.
+Local SDK work expects Converge at `~/dev/reflective/stack/bedrock-platform/converge`.
 
 ## Crates
 
@@ -55,6 +95,49 @@ Local LLM inference for Converge agents using pure Rust frameworks.
 | `GrpcBackend` | Any | Tonic | Remote GPU |
 
 Features: `ndarray` (default), `wgpu`, `gemma`, `lora`, `server`, `grpc-client`, `recall`, `semantic-embedding`, `anthropic`.
+
+### runway-storage
+
+Shared storage abstraction for all Reflective apps. One trait set, two backends.
+
+```rust
+// Tauri desktop (offline-first)
+let kit = StorageKit::local("~/.inkling").await?;
+
+// Cloud Run backend
+let kit = StorageKit::remote(RemoteConfig::from_env()?).await?;
+```
+
+| Trait | Local | Remote |
+|-------|-------|--------|
+| `DocumentStore` | redb (ACID embedded) | Firestore REST v1 |
+| `VectorStore` | redb + brute-force cosine | Vertex AI Matching Engine |
+| `ObjectStore` | Local filesystem (atomic write) | GCS JSON API |
+| `EventLog` | redb (dedup + unsynced index) | Firestore subcollection |
+| `EmbeddingProvider` | fastembed AllMiniLML6V2 (384→768-padded) | Vertex AI text-multilingual-embedding-002 |
+
+Offline vectors are zero-padded to 768 dims for index compatibility with remote Vertex AI vectors.
+When the Tauri app goes online, it re-embeds via VertexEmbedder to replace approximations.
+
+### runway-auth
+
+Firebase Auth Tower middleware. Validates Bearer tokens via Identity Toolkit, injects `AuthContext`
+with `{ uid, email, org_id, apps: Vec<String>, role }` custom claims into Axum handlers.
+
+### runway-middleware
+
+Axum middleware stack: request-id (UUID), OTel trace, gzip compression, CORS, JSON error formatter,
+graceful SIGTERM shutdown, `/health` endpoint.
+
+### runway-secrets
+
+GCP Secret Manager client. Secrets are named `{env}-{app}-{key}`. All values held as `SecretString`
+(zeroized on drop). `SecretMap::require()` fails fast at startup for missing secrets.
+
+### runway-telemetry
+
+OpenTelemetry → Cloud Trace (OTLP/HTTP), Sentry error tracking, JSON structured logging → Cloud Logging.
+Returns a `TelemetryGuard` that shuts down the tracer provider on drop.
 
 ## Building
 

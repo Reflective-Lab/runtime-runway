@@ -14,21 +14,20 @@ Distribution, deployment, and infrastructure for the Converge stack.
 
 ## What does NOT belong here
 
-- Converge SDK crates — those live in `../converge/`
+- Converge SDK crates — those live in `~/dev/reflective/stack/bedrock-platform/converge/`
 - Product code (Helms, Wolfgang) — separate repos
 - Organism runtime — separate repo
 
 ## Dependencies
 
 Runway pins Converge crates to a release tag by default.
-For local SDK work, use `just use-local-converge` to patch to sibling `../converge`.
-Both repos should still be checked out as siblings under `~/dev/work/`.
+For local SDK work, use `just use-local-converge` to patch to `../reflective/stack/bedrock-platform/converge`.
 
 ## Session scope
 
 - **Milestones:** `MILESTONES.md` (when it exists)
 - **Changelog:** `kb/History/CHANGELOG.md`
-- **Strategic context:** `~/dev/work/EPIC.md`
+- **Strategic context:** `~/dev/reflective/stack/bedrock-platform/EPIC.md`
 
 ## Rules
 

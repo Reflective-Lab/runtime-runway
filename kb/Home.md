@@ -33,4 +33,4 @@ Distribution, deployment, and infrastructure for the Converge stack. Separated f
 
 - [[Building/Deployment]] — full deployment guide
 - [[Architecture/Crate Map]] — what crates live here and their deps
-- Converge SDK: `../converge/kb/`
+- Converge SDK: `~/dev/reflective/stack/bedrock-platform/converge/kb/`

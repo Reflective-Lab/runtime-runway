@@ -31,7 +31,7 @@ We use strongly typed languages that compile to native code. Rust for the system
 | `converge-application` | The `converge` CLI/TUI binary |
 | `converge-llm` | Local LLM inference (Burn, llama.cpp) |
 
-Both are proprietary and unpublished. They depend on a pinned Converge release tag by default, with an optional local Cargo patch to sibling `../converge` for SDK work.
+Both are proprietary and unpublished. They depend on a pinned Converge release tag by default, with an optional local Cargo patch to `../reflective/stack/bedrock-platform/converge` for SDK work.
 
 ## Build
 
@@ -48,7 +48,7 @@ just smoke-test     # verify health
 just deploy-cloud-run  # deploy runtime to Cloud Run
 just focus          # session opener — repo health + recent activity
 just sync           # team sync — PRs, issues, recent commits
-just use-local-converge     # patch crates to sibling ../converge
+just use-local-converge     # patch crates to local Converge checkout
 just use-released-converge  # remove the local override
 ```
 
@@ -78,7 +78,7 @@ docker/             Container definitions
 ops/                Deployment scripts, GPU infra
 ```
 
-The Converge SDK lives in `../converge/`. Both repos must be siblings under `~/dev/work/` for local SDK work and runtime packaging.
+The Converge SDK lives at `~/dev/reflective/stack/bedrock-platform/converge/` for local SDK work and runtime packaging.
 
 ## Workflows
 
@@ -103,4 +103,4 @@ Run `just focus` at session start. See `kb/Workflow/Daily Journey.md` for the fu
 
 ## Milestones
 
-Read `MILESTONES.md` at the start of every session (when it exists). See `~/dev/work/EPIC.md` for the strategic context and `~/dev/work/MILESTONES.md` for the cross-project rollup.
+Read `MILESTONES.md` at the start of every session (when it exists). See `~/dev/reflective/stack/bedrock-platform/EPIC.md` for the strategic context and `~/dev/reflective/stack/bedrock-platform/MILESTONES.md` for the cross-project rollup.

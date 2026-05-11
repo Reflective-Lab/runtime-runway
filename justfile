@@ -59,11 +59,11 @@ fmt:
 
 # ── Converge Source ────────────────────────────────────────────────────
 
-# Use sibling ../converge instead of the pinned release tag
+# Use the local Converge checkout instead of the pinned release tag
 use-local-converge:
     mkdir -p .cargo
     cp .cargo/config.toml.example .cargo/config.toml
-    @echo "Using local converge checkout from ../converge"
+    @echo "Using local converge checkout from ../reflective-stack/bedrock-platform/converge"
     @echo "Disable with: just use-released-converge"
 
 # Use the pinned release tag from Cargo.toml
@@ -74,7 +74,7 @@ use-released-converge:
 # Show which converge source Cargo will use
 converge-source:
     @if [ -f .cargo/config.toml ]; then \
-        echo "Local override active: ../converge"; \
+        echo "Local override active: ../reflective-stack/bedrock-platform/converge"; \
     else \
         echo "Pinned release active: {{converge_release}}"; \
     fi
@@ -89,7 +89,54 @@ doc:
 doc-open:
     cargo doc --no-deps --workspace --open
 
-# ── Infrastructure ─────────────────────────────────────────────────────
+# ── Cloud Infrastructure (Terraform + Firebase) ────────────────────────
+
+# One-time: create TF state bucket + Terraform SA (needs Owner/Editor + IAM Admin)
+infra-bootstrap:
+    PROJECT_ID="${PROJECT_ID}" bash ops/infra/scripts/bootstrap.sh
+
+# Initialize Terraform (run after bootstrap, once per workstation)
+infra-init:
+    cd ops/infra/terraform && terraform init
+
+# Preview infrastructure changes
+infra-plan env="dev":
+    cd ops/infra/terraform && terraform plan -var-file=terraform.tfvars -var="env={{env}}"
+
+# Apply infrastructure changes (prompts for confirmation)
+infra-apply env="dev":
+    cd ops/infra/terraform && terraform apply -var-file=terraform.tfvars -var="env={{env}}"
+
+# Destroy infrastructure (dev/staging only — prod blocked by delete_protection)
+infra-destroy env="dev":
+    cd ops/infra/terraform && terraform destroy -var-file=terraform.tfvars -var="env={{env}}"
+
+# Show Terraform outputs (hosts, bucket names, etc.)
+infra-output:
+    cd ops/infra/terraform && terraform output
+
+# Deploy Firebase Auth config + Firestore/Storage security rules
+firebase-provision-auth:
+    PROJECT_ID="${PROJECT_ID}" bash ops/infra/scripts/provision-auth.sh
+
+# Deploy Firestore rules only
+firebase-rules:
+    firebase deploy --only firestore:rules,firestore:indexes \
+        --project="${PROJECT_ID}" \
+        --config ops/infra/firebase/firebase.json
+
+# Deploy Storage rules only
+firebase-storage-rules:
+    firebase deploy --only storage \
+        --project="${PROJECT_ID}" \
+        --config ops/infra/firebase/firebase.json
+
+# Publish platform binaries for a marquee app to the releases CDN
+# Usage: just publish-release folio v1.2.0
+publish-release app version:
+    APP={{app}} VERSION={{version}} PROJECT_ID="${PROJECT_ID}" bash ops/infra/scripts/publish-release.sh
+
+# ── Runtime Infrastructure ─────────────────────────────────────────────
 
 # Start local runtime
 dev-up mode="auto":
@@ -125,17 +172,31 @@ docker-up-extras:
 docker-down:
     cd docker && docker compose down
 
+# ── Local LLM (macOS / Apple Silicon) ──────────────────────────────────
+
+# Native Ollama (Metal-friendly). Stops docker compose `ollama` by default to avoid port 11434 conflicts.
+mac-ollama-up model="qwen2.5:14b-instruct":
+    bash ops/scripts/ollama/mac-ollama-up.sh "{{model}}"
+
+# Quick chat smoke test against native Ollama
+mac-ollama-smoke model="qwen2.5:14b-instruct":
+    bash ops/scripts/ollama/mac-ollama-smoke.sh "{{model}}"
+
+# Stop dockerized Ollama (from docker/compose.yaml profile `llm`)
+mac-ollama-docker-down:
+    cd docker && docker compose --profile llm stop ollama
+
 # ── Git Workflow ───────────────────────────────────────────────────────
 
 # Create a worktree for parallel work (e.g., just worktree fix-auth)
 worktree branch:
-    git worktree add ../runway-{{branch}} -b {{branch}}
-    @echo "Worktree ready at ../runway-{{branch}}"
+    git worktree add ../reflective-runway-{{branch}} -b {{branch}}
+    @echo "Worktree ready at ../reflective-runway-{{branch}}"
     @echo "When done: just worktree-rm {{branch}}"
 
 # Remove a worktree
 worktree-rm branch:
-    git worktree remove ../runway-{{branch}}
+    git worktree remove ../reflective-runway-{{branch}}
     @echo "Worktree removed. Branch '{{branch}}' still exists — delete with: git branch -d {{branch}}"
 
 # List active worktrees
@@ -194,3 +255,31 @@ deps:
     @echo ""
     @echo "Pinned release: {{converge_release}} from Reflective-Lab/converge"
     @echo "Local SDK override: just use-local-converge"
+
+# ── Terraform (environment-scoped) ─────────────────────────────────────
+
+# Initialize Terraform working directory (once per workstation after bootstrap)
+tf-init:
+    cd ops/infra/terraform && terraform init
+
+# Preview changes for an environment (default: staging)
+tf-plan env="staging":
+    cd ops/infra/terraform && terraform plan -var-file=environments/{{env}}.tfvars
+
+# Apply changes for an environment (default: staging)
+tf-apply env="staging":
+    cd ops/infra/terraform && terraform apply -var-file=environments/{{env}}.tfvars
+
+# Destroy infrastructure for an environment — dev/staging only (prod has delete_protection)
+tf-destroy env="staging":
+    @echo "Destroying {{env}} — are you sure? Press Enter to continue."
+    @read
+    cd ops/infra/terraform && terraform destroy -var-file=environments/{{env}}.tfvars
+
+# Deploy Firebase Firestore rules, indexes, and Storage rules
+firebase-deploy:
+    cd ops/infra/firebase && firebase deploy --only firestore:rules,firestore:indexes,storage
+
+# One-time GCP project bootstrap (billing, APIs, TF state bucket, Firebase)
+gcp-setup:
+    ops/scripts/gcp-setup.sh

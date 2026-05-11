@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "YOUR_FIREBASE_PROJECT_ID",
+    "prod":    "YOUR_PROD_FIREBASE_PROJECT_ID",
+    "staging": "YOUR_STAGING_FIREBASE_PROJECT_ID"
+  }
+}

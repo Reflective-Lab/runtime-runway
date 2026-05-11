@@ -1,0 +1,19 @@
+[package]
+name = "runway-secrets"
+description = "GCP Secret Manager client with typed fetch and zeroize-on-drop for Runway services"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+base64 = "0.22"
+reqwest = { workspace = true }
+secrecy = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+zeroize = { workspace = true }

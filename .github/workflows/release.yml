@@ -1,0 +1,450 @@
+# Release — cross-platform binary build and GCS upload
+#
+# Copy this file into any Reflective marquee app repo and change APP_NAME below.
+# Marquee apps: folio, inkling, wolfgang, scout, quorum, vouch
+#
+# Required secrets (set in GitHub repo settings → Secrets and variables → Actions):
+#   APPLE_CERT_BASE64        - Base64-encoded .p12 Developer ID certificate
+#   APPLE_CERT_PASSWORD      - Password for the .p12
+#   APPLE_TEAM_ID            - Apple Developer team ID
+#   APPLE_ID                 - Apple ID email for notarytool
+#   APPLE_APP_PASSWORD       - App-specific password for notarytool
+#   WINDOWS_PFX_BASE64       - Base64-encoded EV code signing cert (.pfx)
+#   WINDOWS_PFX_PASSWORD     - PFX password
+#   GPG_PRIVATE_KEY          - ASCII-armored GPG private key for Linux signing
+#   GPG_PASSPHRASE           - GPG key passphrase
+#   GOOGLE_CREDENTIALS       - GCP service account JSON (releases-uploader SA)
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+env:
+  # TODO: Change this to the app name for each repo (folio, inkling, wolfgang, scout, quorum, vouch)
+  APP_NAME: inkling
+  RUST_VERSION: "1.94.0"
+  CARGO_TERM_COLOR: always
+  GCS_BUCKET: reflective-prod-releases
+  CDN_URL_MAP: releases-lb
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: aarch64-apple-darwin
+            platform: darwin-aarch64
+          - os: macos-13
+            target: x86_64-apple-darwin
+            platform: darwin-x86_64
+          - os: windows-2022
+            target: x86_64-pc-windows-msvc
+            platform: windows-x64
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            platform: linux-x64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: ${{ matrix.target }}
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      # ── Linux system deps ──────────────────────────────────────────────────
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            pkg-config
+
+      # ── macOS system deps ──────────────────────────────────────────────────
+      - name: Install macOS build dependencies
+        if: runner.os == 'macOS'
+        run: brew install openssl pkg-config
+
+      # ── Build ──────────────────────────────────────────────────────────────
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Build Tauri app
+        # TODO: If your app is in a subdirectory, add --config path/to/tauri.conf.json
+        run: cargo tauri build --target ${{ matrix.target }}
+
+      # ── Locate the built binary ────────────────────────────────────────────
+      - name: Locate binary (macOS)
+        if: runner.os == 'macOS'
+        id: locate-macos
+        run: |
+          # TODO: Update the path below to match your Tauri app's bundle output path
+          BINARY_PATH="target/${{ matrix.target }}/release/bundle/macos/${{ env.APP_NAME }}.app/Contents/MacOS/${{ env.APP_NAME }}"
+          echo "binary_path=${BINARY_PATH}" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=${{ env.APP_NAME }}-${{ matrix.platform }}" >> "$GITHUB_OUTPUT"
+          echo "artifact_path=${{ env.APP_NAME }}-${{ matrix.platform }}" >> "$GITHUB_OUTPUT"
+          cp "${BINARY_PATH}" "${{ env.APP_NAME }}-${{ matrix.platform }}"
+
+      - name: Locate binary (Windows)
+        if: runner.os == 'Windows'
+        id: locate-windows
+        shell: pwsh
+        run: |
+          # TODO: Update the path below to match your Tauri app's bundle output path
+          $BinaryPath = "target\${{ matrix.target }}\release\${{ env.APP_NAME }}.exe"
+          "binary_path=${BinaryPath}" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "artifact_name=${{ env.APP_NAME }}-${{ matrix.platform }}.exe" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "artifact_path=${{ env.APP_NAME }}-${{ matrix.platform }}.exe" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Copy-Item $BinaryPath "${{ env.APP_NAME }}-${{ matrix.platform }}.exe"
+
+      - name: Locate binary (Linux)
+        if: runner.os == 'Linux'
+        id: locate-linux
+        run: |
+          # TODO: Update the path below to match your Tauri app's binary output path
+          BINARY_PATH="target/${{ matrix.target }}/release/${{ env.APP_NAME }}"
+          echo "binary_path=${BINARY_PATH}" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=${{ env.APP_NAME }}-${{ matrix.platform }}" >> "$GITHUB_OUTPUT"
+          echo "artifact_path=${{ env.APP_NAME }}-${{ matrix.platform }}" >> "$GITHUB_OUTPUT"
+          cp "${BINARY_PATH}" "${{ env.APP_NAME }}-${{ matrix.platform }}"
+
+      # ── ClamAV scan (skip on Windows — freshclam is unreliable in CI) ──────
+      - name: Install ClamAV
+        if: runner.os != 'Windows'
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            sudo apt-get install -y clamav clamav-daemon
+            sudo systemctl stop clamav-freshclam || true
+            sudo freshclam
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            brew install clamav
+            cp "$(brew --prefix clamav)/etc/clamav/freshclam.conf.sample" /tmp/freshclam.conf
+            sed -i '' 's/^Example/#Example/' /tmp/freshclam.conf
+            freshclam --config-file=/tmp/freshclam.conf
+          fi
+
+      - name: ClamAV scan
+        if: runner.os != 'Windows'
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            ARTIFACT="${{ steps.locate-macos.outputs.artifact_path }}"
+          else
+            ARTIFACT="${{ steps.locate-linux.outputs.artifact_path }}"
+          fi
+          clamscan --recursive --infected "${ARTIFACT}"
+
+      # ── macOS code signing and notarization ───────────────────────────────
+      - name: Import Apple Developer certificate
+        if: runner.os == 'macOS'
+        continue-on-error: false
+        env:
+          APPLE_CERT_BASE64: ${{ secrets.APPLE_CERT_BASE64 }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 20)"
+          CERT_PATH="$RUNNER_TEMP/developer_id.p12"
+
+          echo "${APPLE_CERT_BASE64}" | base64 --decode -o "${CERT_PATH}"
+
+          security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
+          security set-keychain-settings -lut 21600 "${KEYCHAIN_PATH}"
+          security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
+          security import "${CERT_PATH}" \
+            -P "${APPLE_CERT_PASSWORD}" \
+            -A -t cert -f pkcs12 \
+            -k "${KEYCHAIN_PATH}"
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -s -k "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
+          security list-keychains -d user -s "${KEYCHAIN_PATH}"
+
+      - name: Sign macOS binary
+        if: runner.os == 'macOS'
+        continue-on-error: false
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          BINARY="${{ steps.locate-macos.outputs.artifact_path }}"
+          codesign \
+            --force \
+            --options runtime \
+            --sign "Developer ID Application: Reflective Lab (${{ env.APPLE_TEAM_ID }})" \
+            --timestamp \
+            "${BINARY}"
+
+      - name: Notarize macOS binary
+        if: runner.os == 'macOS'
+        continue-on-error: false
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          BINARY="${{ steps.locate-macos.outputs.artifact_path }}"
+          ZIP_PATH="${BINARY}.zip"
+          ditto -c -k --sequesterRsrc --keepParent "${BINARY}" "${ZIP_PATH}"
+          xcrun notarytool submit "${ZIP_PATH}" \
+            --apple-id "${APPLE_ID}" \
+            --password "${APPLE_APP_PASSWORD}" \
+            --team-id "${APPLE_TEAM_ID}" \
+            --wait
+          rm "${ZIP_PATH}"
+
+      # ── Windows code signing ───────────────────────────────────────────────
+      - name: Sign Windows binary
+        if: runner.os == 'Windows'
+        continue-on-error: false
+        shell: pwsh
+        env:
+          WINDOWS_PFX_BASE64: ${{ secrets.WINDOWS_PFX_BASE64 }}
+          WINDOWS_PFX_PASSWORD: ${{ secrets.WINDOWS_PFX_PASSWORD }}
+        run: |
+          $PfxPath = Join-Path $env:RUNNER_TEMP "signing.pfx"
+          [System.IO.File]::WriteAllBytes(
+            $PfxPath,
+            [System.Convert]::FromBase64String($env:WINDOWS_PFX_BASE64)
+          )
+          $Binary = "${{ steps.locate-windows.outputs.artifact_path }}"
+          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe" sign `
+            /f $PfxPath `
+            /p $env:WINDOWS_PFX_PASSWORD `
+            /fd SHA256 `
+            /tr http://timestamp.digicert.com `
+            /td SHA256 `
+            $Binary
+          Remove-Item $PfxPath -Force
+
+      # ── Linux GPG detach-sign ─────────────────────────────────────────────
+      - name: Sign Linux binary with GPG
+        if: runner.os == 'Linux'
+        continue-on-error: false
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "${GPG_PRIVATE_KEY}" | gpg --batch --import
+          BINARY="${{ steps.locate-linux.outputs.artifact_path }}"
+          echo "${GPG_PASSPHRASE}" | gpg \
+            --batch \
+            --yes \
+            --passphrase-fd 0 \
+            --detach-sign \
+            --armor \
+            --output "${BINARY}.sig" \
+            "${BINARY}"
+
+      # ── SHA256 checksum ───────────────────────────────────────────────────
+      - name: Compute SHA256 (macOS)
+        if: runner.os == 'macOS'
+        id: sha256-macos
+        run: |
+          BINARY="${{ steps.locate-macos.outputs.artifact_path }}"
+          CHECKSUM="$(shasum -a 256 "${BINARY}" | awk '{ print $1 }')"
+          echo "sha256=${CHECKSUM}" >> "$GITHUB_OUTPUT"
+          echo "${CHECKSUM}  ${BINARY}" > "${BINARY}.sha256"
+
+      - name: Compute SHA256 (Windows)
+        if: runner.os == 'Windows'
+        id: sha256-windows
+        shell: pwsh
+        run: |
+          $Binary = "${{ steps.locate-windows.outputs.artifact_path }}"
+          $Hash = (Get-FileHash $Binary -Algorithm SHA256).Hash.ToLower()
+          "sha256=${Hash}" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "${Hash}  ${Binary}" | Out-File -FilePath "${Binary}.sha256" -Encoding utf8
+
+      - name: Compute SHA256 (Linux)
+        if: runner.os == 'Linux'
+        id: sha256-linux
+        run: |
+          BINARY="${{ steps.locate-linux.outputs.artifact_path }}"
+          CHECKSUM="$(sha256sum "${BINARY}" | awk '{ print $1 }')"
+          echo "sha256=${CHECKSUM}" >> "$GITHUB_OUTPUT"
+          echo "${CHECKSUM}  ${BINARY}" > "${BINARY}.sha256"
+
+      # ── Upload build artifacts for the release job ─────────────────────────
+      - name: Upload artifact (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.platform }}
+          path: |
+            ${{ steps.locate-macos.outputs.artifact_path }}
+            ${{ steps.locate-macos.outputs.artifact_path }}.sha256
+          if-no-files-found: error
+
+      - name: Upload artifact (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.platform }}
+          path: |
+            ${{ steps.locate-windows.outputs.artifact_path }}
+            ${{ steps.locate-windows.outputs.artifact_path }}.sha256
+          if-no-files-found: error
+
+      - name: Upload artifact (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.platform }}
+          path: |
+            ${{ steps.locate-linux.outputs.artifact_path }}
+            ${{ steps.locate-linux.outputs.artifact_path }}.sig
+            ${{ steps.locate-linux.outputs.artifact_path }}.sha256
+          if-no-files-found: error
+
+  # ────────────────────────────────────────────────────────────────────────────
+  release:
+    name: Release
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write   # needed for softprops/action-gh-release
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          merge-multiple: false
+          path: artifacts/
+
+      - name: List downloaded artifacts
+        run: find artifacts/ -type f | sort
+
+      # ── Upload binaries to GCS ─────────────────────────────────────────────
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+      - name: Upload binaries to GCS
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          path: artifacts/
+          destination: ${{ env.GCS_BUCKET }}/${{ env.APP_NAME }}/${{ github.ref_name }}/
+          glob: "**/*"
+          parent: false
+
+      # ── Generate latest.json ───────────────────────────────────────────────
+      - name: Read checksums
+        id: checksums
+        run: |
+          read_sha() {
+            local platform="$1"
+            local filename="$2"
+            local sha_file="artifacts/binary-${platform}/${filename}.sha256"
+            if [ -f "${sha_file}" ]; then
+              awk '{ print $1 }' "${sha_file}"
+            else
+              echo "unknown"
+            fi
+          }
+
+          APP="${{ env.APP_NAME }}"
+          SHA_DARWIN_AARCH64="$(read_sha darwin-aarch64 "${APP}-darwin-aarch64")"
+          SHA_DARWIN_X86_64="$(read_sha darwin-x86_64 "${APP}-darwin-x86_64")"
+          SHA_WINDOWS_X64="$(read_sha windows-x64 "${APP}-windows-x64.exe")"
+          SHA_LINUX_X64="$(read_sha linux-x64 "${APP}-linux-x64")"
+
+          echo "darwin_aarch64=${SHA_DARWIN_AARCH64}" >> "$GITHUB_OUTPUT"
+          echo "darwin_x86_64=${SHA_DARWIN_X86_64}" >> "$GITHUB_OUTPUT"
+          echo "windows_x64=${SHA_WINDOWS_X64}" >> "$GITHUB_OUTPUT"
+          echo "linux_x64=${SHA_LINUX_X64}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate latest.json
+        env:
+          VERSION: ${{ github.ref_name }}
+          SHA_DARWIN_AARCH64: ${{ steps.checksums.outputs.darwin_aarch64 }}
+          SHA_DARWIN_X86_64: ${{ steps.checksums.outputs.darwin_x86_64 }}
+          SHA_WINDOWS_X64: ${{ steps.checksums.outputs.windows_x64 }}
+          SHA_LINUX_X64: ${{ steps.checksums.outputs.linux_x64 }}
+        run: |
+          APP="${{ env.APP_NAME }}"
+          # Strip leading 'v' from tag for the version field
+          VER="${VERSION#v}"
+          CDN_BASE="https://cdn.reflective.run/${{ env.GCS_BUCKET }}/${APP}/${VERSION}"
+          PUBLISHED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+          cat > latest.json <<JSON
+          {
+            "version": "${VER}",
+            "published_at": "${PUBLISHED_AT}",
+            "files": {
+              "darwin-aarch64": {
+                "url": "${CDN_BASE}/${APP}-darwin-aarch64",
+                "sha256": "${SHA_DARWIN_AARCH64}"
+              },
+              "darwin-x86_64": {
+                "url": "${CDN_BASE}/${APP}-darwin-x86_64",
+                "sha256": "${SHA_DARWIN_X86_64}"
+              },
+              "windows-x64": {
+                "url": "${CDN_BASE}/${APP}-windows-x64.exe",
+                "sha256": "${SHA_WINDOWS_X64}"
+              },
+              "linux-x64": {
+                "url": "${CDN_BASE}/${APP}-linux-x64",
+                "sha256": "${SHA_LINUX_X64}"
+              }
+            }
+          }
+          JSON
+
+          echo "Generated latest.json:"
+          cat latest.json
+
+      - name: Upload latest.json to GCS
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          path: latest.json
+          destination: ${{ env.GCS_BUCKET }}/${{ env.APP_NAME }}/
+          parent: false
+
+      # ── CDN cache invalidation ─────────────────────────────────────────────
+      - name: Invalidate CDN cache
+        run: |
+          gcloud compute url-maps invalidate-cdn-cache ${{ env.CDN_URL_MAP }} \
+            --path "/${{ env.APP_NAME }}/*" \
+            --async
+
+      # ── GitHub Release ────────────────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ env.APP_NAME }} ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            artifacts/binary-darwin-aarch64/${{ env.APP_NAME }}-darwin-aarch64
+            artifacts/binary-darwin-aarch64/${{ env.APP_NAME }}-darwin-aarch64.sha256
+            artifacts/binary-darwin-x86_64/${{ env.APP_NAME }}-darwin-x86_64
+            artifacts/binary-darwin-x86_64/${{ env.APP_NAME }}-darwin-x86_64.sha256
+            artifacts/binary-windows-x64/${{ env.APP_NAME }}-windows-x64.exe
+            artifacts/binary-windows-x64/${{ env.APP_NAME }}-windows-x64.exe.sha256
+            artifacts/binary-linux-x64/${{ env.APP_NAME }}-linux-x64
+            artifacts/binary-linux-x64/${{ env.APP_NAME }}-linux-x64.sig
+            artifacts/binary-linux-x64/${{ env.APP_NAME }}-linux-x64.sha256
+            latest.json

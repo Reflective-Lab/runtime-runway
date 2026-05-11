@@ -1,0 +1,10 @@
+project_id      = "your-gcp-project-id"
+region          = "europe-west1"
+env             = "dev"
+apps            = ["folio", "scout", "quorum", "wolfgang", "vouch"]
+spanner_config  = "regional-europe-west1"
+redis_tier      = "BASIC"
+redis_memory_gb = 1
+
+releases_domain   = "releases.yourdomain.com"
+releases_location = "EU"

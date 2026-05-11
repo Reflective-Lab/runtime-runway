@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Deny everything by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // All app data lives under orgs/{orgId}/apps/{appId}/...
+    // Firebase Auth custom claims must include org_id and app_access map.
+    match /orgs/{orgId}/apps/{appId}/{collection}/{docId} {
+      allow read: if request.auth != null
+        && request.auth.token.org_id == orgId;
+
+      allow create, update: if request.auth != null
+        && request.auth.token.org_id == orgId
+        && request.auth.token.app_access[appId] == true;
+
+      allow delete: if false; // soft-delete only — set status field instead
+    }
+
+    // ExperienceEvents are append-only. No updates or deletes ever.
+    match /orgs/{orgId}/apps/{appId}/events/{eventId} {
+      allow read: if request.auth != null
+        && request.auth.token.org_id == orgId;
+
+      allow create: if request.auth != null
+        && request.auth.token.org_id == orgId
+        && request.auth.token.app_access[appId] == true;
+
+      allow update, delete: if false;
+    }
+  }
+}
