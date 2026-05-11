@@ -2,17 +2,15 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-PROJECT_ID="${PROJECT_ID:-${GOOGLE_CLOUD_PROJECT:-}}"
+PROJECT_ID="${PROJECT_ID:-wolfgang-kb-prod}"
 REGION="${REGION:-europe-west1}"
 SERVICE_NAME="${SERVICE_NAME:-api-server}"
-REPOSITORY="${REPOSITORY:-runway}"
+REPOSITORY="${REPOSITORY:-wolfgang}"
 IMAGE_NAME="${IMAGE_NAME:-api-server}"
+GCS_BUCKET="${GCS_BUCKET:-wolfgang-kb-prod-runway-api}"
 FIREBASE_PROJECT_ID="${FIREBASE_PROJECT_ID:-$PROJECT_ID}"
-
-if [[ -z "$PROJECT_ID" ]]; then
-    echo "Set PROJECT_ID or GOOGLE_CLOUD_PROJECT before deploying." >&2
-    exit 1
-fi
+FIREBASE_API_KEY="${FIREBASE_API_KEY:-AIzaSyC2tfrm79dj9F3yATwpvropscc7B3DQ2oc}"
+SERVICE_ACCOUNT="${SERVICE_ACCOUNT:-run-api-server@${PROJECT_ID}.iam.gserviceaccount.com}"
 
 command -v gcloud >/dev/null 2>&1 || { echo "gcloud CLI is required" >&2; exit 1; }
 
@@ -21,35 +19,35 @@ IMAGE_URI="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:$(
 echo "Project:        $PROJECT_ID"
 echo "Region:         $REGION"
 echo "Service:        $SERVICE_NAME"
+echo "Repository:     $REPOSITORY"
 echo "Image:          $IMAGE_URI"
+echo "GCS bucket:     $GCS_BUCKET"
+echo "SA:             $SERVICE_ACCOUNT"
+echo ""
 
-gcloud auth configure-docker "${REGION}-docker.pkg.dev"
+gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
 
-gcloud artifacts repositories describe "$REPOSITORY" \
-    --location="$REGION" \
-    --project="$PROJECT_ID" >/dev/null 2>&1 || \
-gcloud artifacts repositories create "$REPOSITORY" \
-    --repository-format=docker \
-    --location="$REGION" \
+echo "Building image via Cloud Build..."
+gcloud builds submit "$ROOT_DIR" \
+    --config="$ROOT_DIR/cloudbuild.api-server.yaml" \
+    --substitutions="_IMAGE_URI=${IMAGE_URI}" \
     --project="$PROJECT_ID"
 
-gcloud builds submit "$ROOT_DIR" \
-    --tag "$IMAGE_URI" \
-    --project="$PROJECT_ID" \
-    --dockerfile="$ROOT_DIR/docker/Dockerfile.api-server"
-
+echo "Deploying to Cloud Run..."
 gcloud run deploy "$SERVICE_NAME" \
     --image "$IMAGE_URI" \
     --region "$REGION" \
     --project "$PROJECT_ID" \
     --platform managed \
     --allow-unauthenticated \
-    --set-env-vars "LOCAL_DEV=false,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}" \
-    --service-account "api-server@${PROJECT_ID}.iam.gserviceaccount.com" \
+    --service-account "$SERVICE_ACCOUNT" \
+    --set-env-vars "LOCAL_DEV=false,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID},GCS_BUCKET=${GCS_BUCKET},FIREBASE_API_KEY=${FIREBASE_API_KEY},ROUTE_PREFIX=/api-server" \
     --memory 512Mi \
     --cpu 1 \
     --min-instances 0 \
-    --max-instances 10
+    --max-instances 5
 
 echo ""
-echo "Deployed: $(gcloud run services describe "$SERVICE_NAME" --region "$REGION" --project "$PROJECT_ID" --format='value(status.url)')"
+URL=$(gcloud run services describe "$SERVICE_NAME" --region "$REGION" --project "$PROJECT_ID" --format='value(status.url)')
+echo "Deployed: $URL"
+echo "Health:   $URL/health"

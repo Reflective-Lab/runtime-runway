@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "wolfgang-kb-prod"
+  },
+  "targets": {
+    "wolfgang-kb-prod": {
+      "hosting": {
+        "apps-reflective-se": ["apps-reflective-se"]
+      }
+    }
+  }
+}

@@ -49,7 +49,16 @@ async fn main() -> Result<()> {
         .layer(auth_layer)
         .with_state(state);
 
-    let app = stack(protected);
+    // ROUTE_PREFIX=/api-server mounts all routes under that path.
+    // Firebase Hosting rewrites pass the full path through, so this lets
+    // apps.reflective.se/api-server/** route to this service.
+    // /health always stays at root for Cloud Run health checks.
+    let routed = match std::env::var("ROUTE_PREFIX") {
+        Ok(prefix) if !prefix.is_empty() => Router::new().nest(&prefix, protected),
+        _ => protected,
+    };
+
+    let app = stack(routed);
 
     info!("api-server starting");
     serve(app).await;

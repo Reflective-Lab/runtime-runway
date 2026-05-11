@@ -154,6 +154,10 @@ api-docker-run:
 api-deploy:
     SERVICE_NAME=api-server IMAGE_NAME=api-server bash ops/scripts/deploy-api-server.sh
 
+# Deploy Firebase Hosting for apps.reflective.se
+apps-deploy:
+    cd ops/infra/firebase/apps && firebase deploy --only hosting:apps-reflective-se
+
 # ── Runtime Infrastructure ─────────────────────────────────────────────
 
 # Start local runtime

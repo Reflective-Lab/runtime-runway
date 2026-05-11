@@ -1,0 +1,28 @@
+{
+  "hosting": {
+    "site": "apps-reflective-se",
+    "public": "public",
+    "cleanUrls": true,
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "X-Frame-Options", "value": "DENY" },
+          { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        ]
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "/api-server/**",
+        "run": {
+          "serviceId": "api-server",
+          "region": "europe-west1",
+          "projectId": "wolfgang-kb-prod"
+        }
+      }
+    ],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+  }
+}

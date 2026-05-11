@@ -1,0 +1,3 @@
+# Cloud Build ignore — based on .gitignore but keeps Cargo.lock for reproducible builds.
+#!include:.gitignore
+!Cargo.lock
