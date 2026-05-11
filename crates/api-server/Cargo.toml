@@ -1,0 +1,27 @@
+[package]
+name = "api-server"
+description = "Runway reference Cloud Run server — wires all five runway-* crates"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "api-server"
+path = "src/main.rs"
+
+[dependencies]
+runway-auth = { path = "../runway-auth" }
+runway-middleware = { path = "../runway-middleware" }
+runway-secrets = { path = "../runway-secrets" }
+runway-storage = { path = "../runway-storage" }
+runway-telemetry = { path = "../runway-telemetry" }
+
+anyhow = { workspace = true }
+axum = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }

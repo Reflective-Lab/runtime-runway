@@ -3,6 +3,20 @@ source: llm
 ---
 # Changelog
 
+## 2026-05-11 — api-server deployment spike
+
+Added `crates/api-server` — a minimal Cloud Run binary that wires all five runway-* crates together and proves the deployment path end-to-end:
+
+- Boots with `StorageKit::local()` (redb) in `LOCAL_DEV=true` mode; switches to `StorageKit::remote()` (Firestore + GCS + Vertex AI) in production
+- `runway-telemetry::init()` called at startup for Cloud Trace + Sentry
+- `runway-auth::AuthLayer` on all API routes; `AuthContext` injected into handlers
+- `runway-middleware::stack()` wraps the router (request-id, OTel span, gzip, CORS, error body, `/health`)
+- Routes: `GET /health` (open), `GET /api/me` (auth), `GET /api/events` (auth + query params), `POST /api/events` (auth + StoredEvent append)
+- Fixed `runway-middleware::serve` — removed bogus `axum::handler::Handler` bound; now takes `Router<()>` directly
+- `docker/Dockerfile.api-server` for Cloud Run packaging
+- `ops/scripts/deploy-api-server.sh` for `gcloud builds submit` + `gcloud run deploy`
+- `just api-up`, `just api-docker-build`, `just api-docker-run`, `just api-deploy` targets
+
 ## 2026-05-11 — Shared infrastructure crates (runway-*)
 
 Added five new crates that form the shared infrastructure layer reused by all Reflective apps

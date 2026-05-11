@@ -136,6 +136,24 @@ firebase-storage-rules:
 publish-release app version:
     APP={{app}} VERSION={{version}} PROJECT_ID="${PROJECT_ID}" bash ops/infra/scripts/publish-release.sh
 
+# ── api-server ─────────────────────────────────────────────────────────
+
+# Run api-server locally (redb storage, no Firebase auth needed)
+api-up:
+    LOCAL_DEV=true STORAGE_PATH=/tmp/api-server cargo run -p api-server
+
+# Build api-server Docker image
+api-docker-build:
+    docker build -f docker/Dockerfile.api-server -t api-server:dev .
+
+# Run api-server Docker image locally
+api-docker-run:
+    docker run --rm -p 8080:8080 -e LOCAL_DEV=true -e STORAGE_PATH=/tmp/api-server api-server:dev
+
+# Deploy api-server to Cloud Run
+api-deploy:
+    SERVICE_NAME=api-server IMAGE_NAME=api-server bash ops/scripts/deploy-api-server.sh
+
 # ── Runtime Infrastructure ─────────────────────────────────────────────
 
 # Start local runtime

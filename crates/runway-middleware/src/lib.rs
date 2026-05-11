@@ -65,12 +65,9 @@ where
 }
 
 /// Serve the router on PORT (default 8080) with graceful SIGTERM shutdown.
-pub async fn serve<S>(app: Router<S>)
-where
-    Router<S>: axum::handler::Handler<(), ()>,
-    S: Clone + Send + Sync + 'static,
-    Router<S>: Into<Router>,
-{
+///
+/// Call `.with_state()` on your router before passing it here.
+pub async fn serve(app: Router) {
     let port: u16 = std::env::var("PORT")
         .ok()
         .and_then(|p| p.parse().ok())
@@ -81,7 +78,7 @@ where
         .expect("bind failed");
     tracing::info!("listening on {addr}");
 
-    axum::serve(listener, app.into())
+    axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await
         .expect("server error");
