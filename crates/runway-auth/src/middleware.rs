@@ -123,9 +123,20 @@ where
                 Err(e) => return Ok(e.into_response()),
             };
 
-            let claims = match auth.verify(&token).await {
-                Ok(c) => c,
-                Err(e) => return Ok(AuthError::InvalidToken(e.to_string()).into_response()),
+            // In LOCAL_DEV mode, accept "dev" as a bypass token and inject a canned context.
+            let claims = if std::env::var("LOCAL_DEV").as_deref() == Ok("true") && token == "dev" {
+                FirebaseClaims {
+                    uid: "dev-uid".into(),
+                    email: Some("dev@local".into()),
+                    org_id: Some("dev-org".into()),
+                    apps: vec!["api-server".into()],
+                    role: Some("admin".into()),
+                }
+            } else {
+                match auth.verify(&token).await {
+                    Ok(c) => c,
+                    Err(e) => return Ok(AuthError::InvalidToken(e.to_string()).into_response()),
+                }
             };
 
             if let Some(app) = &required_app
