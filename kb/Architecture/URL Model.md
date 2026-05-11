@@ -19,6 +19,7 @@ The path prefix is the Cloud Run `ROUTE_PREFIX` env var. The Cloud Run service m
 | App | Firebase path | Cloud Run service | Project |
 |-----|--------------|-------------------|---------|
 | api-server | `/api-server/**` | `api-server` | `wolfgang-kb-prod` |
+| catalyst-backend | `/catalyst/**` | `catalyst-backend` | `wolfgang-kb-prod` |
 
 New apps: add a `run` rewrite block in `ops/infra/firebase/apps/firebase.json` and run `just apps-deploy`.
 

@@ -15,6 +15,14 @@
     ],
     "rewrites": [
       {
+        "source": "/catalyst/**",
+        "run": {
+          "serviceId": "catalyst-backend",
+          "region": "europe-west1",
+          "projectId": "wolfgang-kb-prod"
+        }
+      },
+      {
         "source": "/api-server/**",
         "run": {
           "serviceId": "api-server",
