@@ -1,5 +1,7 @@
 # Reflective Runway
 
+**Repo:** https://github.com/Reflective-Lab/runway
+
 This is the canonical agent entrypoint — all agents (Claude, Codex, Gemini, or otherwise) start here. Long-form documentation lives in `kb/`.
 
 ## Philosophy
