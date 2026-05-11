@@ -3,118 +3,154 @@ source: mixed
 ---
 # Deployment
 
-Adapted from converge `kb/Building/Deployment.md` after the 2026-04-19 split.
-
 ## Targets
 
-| Target | How | Status |
-|--------|-----|--------|
-| Local native | `cargo run -p converge-application` | Working |
-| Local container | `docker compose up` (from `docker/`) | Working with local Converge checkout |
-| Google Cloud Run (runtime) | `ops/scripts/deploy-cloud-run.sh` | Script-based; stages local Converge source |
-| Google Cloud Run (GPU) | `ops/deploy/gpu/cloudrun/deploy.sh` | Script-based |
-| RunPod (GPU) | `ops/deploy/gpu/runpod/` | Dockerfile ready |
-| Modal (GPU) | `ops/deploy/gpu/modal/` | Stub only |
+| Target | Command | Status |
+|--------|---------|--------|
+| Local native (api-server) | `just api-up` | Working |
+| Local native (converge-application) | `cargo run -p converge-application` | Working |
+| Local container | `just docker-up` | Working (Converge checkout required) |
+| Cloud Run (api-server) | `just api-deploy` | Live — `wolfgang-kb-prod`, `europe-west1` |
+| Cloud Run (converge-runtime) | `ops/scripts/deploy-cloud-run.sh` | Script-based |
+| Cloud Run GPU | `ops/deploy/gpu/cloudrun/deploy.sh` | Script-based |
+| Firebase Hosting (apps.reflective.se) | `just apps-deploy` | Live |
 
-## Local development
+---
 
-### Native
+## api-server (the reference Cloud Run service)
 
-```bash
-cargo run -p converge-application
-# or with features:
-cargo run -p converge-application --features full
+`crates/api-server` is the canonical deployment spike — a minimal Cloud Run binary that wires all five `runway-*` crates and proves the full GCP path end-to-end.
 
-# local Converge SDK work:
-just use-local-converge
-# back to the pinned release tag:
-just use-released-converge
-```
-
-### Docker
+### Local development
 
 ```bash
-cd docker/
-docker compose up                    # runtime only
-docker compose --profile extras up   # + NATS + SurrealDB
-```
+just api-up
+# Runs with LOCAL_DEV=true, redb storage at /tmp/api-server, no Firebase needed.
 
-By default, the Docker build reads runtime source from `~/dev/reflective/stack/bedrock-platform/converge`.
-Override with `CONVERGE_ROOT=/abs/path/to/converge` if needed.
-
-Services:
-- `converge-runtime` on port 8080 (features: `gcp,auth,firebase`)
-- `nats` on port 4222 (extras profile)
-- `surrealdb` on port 8000 (extras profile, in-memory)
-
-### Health check
-
-```bash
+# Test with dev bypass token:
 curl http://localhost:8080/health
-curl http://localhost:8080/ready
+curl -H "Authorization: Bearer dev" http://localhost:8080/api/me
+curl -H "Authorization: Bearer dev" -X POST http://localhost:8080/api/events \
+  -H "Content-Type: application/json" \
+  -d '{"app_id":"test","event_type":"ping","payload":{"hello":"world"}}'
 ```
 
-## Cloud Run deployment (runtime)
+`Authorization: Bearer dev` is accepted in `LOCAL_DEV=true` mode and injects a canned `AuthContext` (uid: `dev-uid`, org: `dev-org`). All other tokens hit Firebase.
 
-Script: `ops/scripts/deploy-cloud-run.sh`
-
-Requires: `gcloud` CLI, `PROJECT_ID` or `GOOGLE_CLOUD_PROJECT` env var, and a local `~/dev/reflective/stack/bedrock-platform/converge` checkout (or `CONVERGE_ROOT`).
-
-Flow:
-1. Validates GCP project
-2. Creates Artifact Registry if needed
-3. Stages a temporary Docker build context from the Converge checkout plus Runway's Dockerfile
-4. Builds + pushes image tagged by git commit hash
-5. Deploys to Cloud Run with GCP/Firebase env vars
-
-## GPU worker deployment
-
-### Cloud Run GPU
-
-Script: `ops/deploy/gpu/cloudrun/deploy.sh`
+### Deploy to Cloud Run
 
 ```bash
-PROJECT_ID=my-project ./ops/deploy/gpu/cloudrun/deploy.sh
+just api-deploy
+# Builds via Cloud Build → pushes to Artifact Registry → deploys Cloud Run → tags revision
 ```
 
-Deploys `converge-llm-server` on Cloud Run with:
-- 1x NVIDIA L4 GPU, 8 CPU, 32GB RAM
-- gRPC on port 50051
-- Env: `MODEL_PATH`, `MODEL_VARIANT` (default: llama3-8b), `MAX_SEQ_LEN` (default: 4096)
-- Region: `europe-west1`
-- No unauthenticated access
+GCP context:
+- **Project:** `wolfgang-kb-prod`
+- **Region:** `europe-west1`
+- **Artifact Registry:** `europe-west1-docker.pkg.dev/wolfgang-kb-prod/wolfgang/api-server`
+- **Cloud Run service:** `api-server`
+- **Service account:** `run-api-server@wolfgang-kb-prod.iam.gserviceaccount.com`
+- **GCS bucket:** `wolfgang-kb-prod-runway-api` (runway-storage object store)
+- **Firestore:** shared with `wolfgang-kb-prod` project
+- **Cloud Build config:** `cloudbuild.api-server.yaml`
 
-### RunPod
+Every deploy:
+1. Builds image tagged `{sha}` via Cloud Build (E2_HIGHCPU_8)
+2. Deploys to Cloud Run, sets `ROUTE_PREFIX=/api-server`
+3. Tags the revision with `v{major}-{minor}-{patch}` and `sha-{git-sha}`
 
-Dockerfile + `start-worker.sh` at `ops/deploy/gpu/runpod/`. Same CUDA 12.4.1 base, same `converge-llm-server` binary.
+---
 
-### Modal
+## URL model — apps.reflective.se
 
-Stub at `ops/deploy/gpu/modal/`. Returns healthcheck only. WIP.
+All Reflective apps share a single Firebase Hosting entry point. The path prefix is the app name.
 
-## Known gaps
+```
+apps.reflective.se/{app-name}/**     →  Cloud Run service  `{app-name}`
+apps.reflective.se/{app-name}/v3/**  →  Cloud Run service  `{app-name}-v3`  (frozen major)
+```
 
-1. No Terraform — all infra is imperative bash scripts
-2. No Kubernetes manifests
-3. No Firebase Hosting config (`firebase.json`, rules)
-4. No CI/CD pipeline for runway builds
-5. GPU worker scaffolding is prepared, not production-complete
-6. No service-to-service auth between runtime and GPU workers
-7. No model artifact strategy (where weights live, how they're fetched)
+The `apps.reflective.se` domain maps to the Firebase Hosting site `apps-reflective-se` in project `wolfgang-kb-prod`. Adding an app means:
+1. Add a `run` rewrite block in `ops/infra/firebase/apps/firebase.json`
+2. Run `just apps-deploy`
 
-## Verified facts
+### Versioned URLs
 
-- Runway pins Converge library crates to Git tag `v3.4.0` by default
-- Local SDK development can patch those crates back to `../reflective/stack/bedrock-platform/converge`
-- Runtime helper scripts resolve runtime source from `~/dev/reflective/stack/bedrock-platform/converge` or `CONVERGE_ROOT`
-- Cloud Run GPU deploy script is syntactically correct
+Every deploy tags the Cloud Run revision, giving stable direct URLs that survive future deploys:
 
-## Resume commands
+| URL | Meaning |
+|-----|---------|
+| `apps-reflective-se.web.app/api-server/api/me` | Rolling latest |
+| `https://v3-4-1---api-server-{hash}-ew.a.run.app/...` | Pinned to version 3.4.1 |
+| `https://sha-{sha}---api-server-{hash}-ew.a.run.app/...` | Pinned to exact commit |
+
+### Freezing a major version
+
+When v4 ships and frontends need more migration time on v3:
+
+```bash
+just api-freeze 3
+# Deploys api-server-v3 Cloud Run service with ROUTE_PREFIX=/api-server/v3.
+# Prints the firebase.json block to add for apps.reflective.se/api-server/v3/**.
+# Then: just apps-deploy
+```
+
+### Adding the custom domain
+
+`apps.reflective.se` is not yet pointing at Firebase Hosting. To activate:
+1. Firebase Console → Hosting → `apps-reflective-se` → Add custom domain → `apps.reflective.se`
+2. Add the CNAME `apps.reflective.se → apps-reflective-se.web.app` in DNS
+3. Firebase issues a managed TLS certificate automatically
+
+---
+
+## Environment variables (Cloud Run)
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `LOCAL_DEV` | `false` | Switches StorageKit to Firestore/GCS/Vertex AI |
+| `GOOGLE_CLOUD_PROJECT` | `wolfgang-kb-prod` | GCP project for Firestore, GCS |
+| `FIREBASE_PROJECT_ID` | `wolfgang-kb-prod` | Firebase Auth project |
+| `FIREBASE_API_KEY` | (from Wolfgang .env.production) | Token verification |
+| `GCS_BUCKET` | `wolfgang-kb-prod-runway-api` | Object store bucket |
+| `ROUTE_PREFIX` | `/api-server` | Mount path matching Firebase Hosting rewrite |
+| `OTLP_ENDPOINT` | (optional) | Cloud Trace OTLP endpoint |
+| `SENTRY_DSN` | (optional) | Sentry error tracking |
+
+---
+
+## Overriding defaults
+
+```bash
+# Deploy to a different project:
+PROJECT_ID=my-project just api-deploy
+
+# Deploy a frozen v3 service:
+SERVICE_NAME=api-server-v3 ROUTE_PREFIX=/api-server/v3 just api-deploy
+
+# Use a different Artifact Registry repo:
+REPOSITORY=my-repo just api-deploy
+```
+
+---
+
+## converge-application (local + container)
 
 ```bash
 cargo run -p converge-application
-cd docker && docker compose up
-ops/scripts/smoke-test.sh
+# or: just docker-up
 ```
 
-See also: [[Building/Docker]], [[Architecture/Application]]
+See [[Building/Docker]] for Docker compose details. Cloud Run deployment for `converge-runtime` uses `ops/scripts/deploy-cloud-run.sh` and requires a local Converge checkout or `CONVERGE_ROOT` override.
+
+---
+
+## GPU workers
+
+| Target | Script | Notes |
+|--------|--------|-------|
+| Cloud Run GPU | `ops/deploy/gpu/cloudrun/deploy.sh` | NVIDIA L4, gRPC 50051 |
+| RunPod | `ops/deploy/gpu/runpod/` | CUDA 12.4.1 base |
+| Modal | `ops/deploy/gpu/modal/` | Stub only |
+
+See also: [[Building/Docker]], [[Architecture/Crate Map]]

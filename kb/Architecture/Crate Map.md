@@ -5,9 +5,14 @@ source: llm
 
 Runway hosts two categories of crates: Converge distribution crates (application and LLM) and the shared infrastructure crates (`runway-*`). The runway-* crates have no Converge dependency — they are standalone infra primitives reused by all Reflective apps.
 
+`api-server` is the reference binary that wires all five runway-* crates together and proves the Cloud Run deployment path.
+
 ## Crates
 
 ```
+api-server               → all 5 runway-* crates         Reference Cloud Run service;
+                                                          proves deployment end-to-end
+
 converge-application     → converge-core, converge-experience,    CLI/TUI distribution
                            converge-provider + optional subsystems
 converge-llm             → converge-core, converge-domain          Local LLM inference (Burn)
@@ -16,7 +21,8 @@ runway-storage           → redb, reqwest, fastembed, serde_json    StorageKit:
                                                                     VectorStore + ObjectStore +
                                                                     EventLog + EmbeddingProvider
 runway-auth              → reqwest, axum, tower                    Firebase Auth Tower middleware
-runway-middleware        → axum, tower-http                        Request-id, trace, CORS, compression
+runway-middleware        → axum, tower-http                        Request-id, trace, CORS,
+                                                                    compression, /health, serve()
 runway-secrets           → reqwest, secrecy, zeroize               GCP Secret Manager client
 runway-telemetry         → opentelemetry, sentry, tracing          OTel → Cloud Trace + Sentry
 ```
@@ -24,14 +30,77 @@ runway-telemetry         → opentelemetry, sentry, tracing          OTel → Cl
 ## Dependency direction
 
 ```
+reflective/runway/crates/api-server   ──→  runway-{storage, auth, middleware, secrets, telemetry}
 reflective/runway/crates/application  ──→  converge/crates/{core, experience, provider, ...}
 reflective/runway/crates/llm          ──→  converge/crates/{core, domain, provider, storage}
 reflective/runway/crates/runway-*     ──→  (no converge dependency)
 ```
 
-Runway pins Converge dependencies to Git tag `v3.4.0` by default.
-For local SDK work, copy `.cargo/config.toml.example` to `.cargo/config.toml` or run `just use-local-converge` to patch to `../reflective/stack/bedrock-platform/converge`.
-Runtime packaging expects Converge at `~/dev/reflective/stack/bedrock-platform/converge` unless `CONVERGE_ROOT` overrides it.
+## runway-* crate reference
+
+### runway-storage
+
+Two-mode `StorageKit` — same API, backend selected at startup:
+
+```rust
+StorageKit::local(base_path)   // Tauri: redb + local FS + fastembed
+StorageKit::remote(config)     // Cloud Run: Firestore + GCS + Vertex AI
+```
+
+| Trait | Local | Remote |
+|-------|-------|--------|
+| `DocumentStore` | redb (ACID, WAL) | Firestore REST v1 |
+| `VectorStore` | redb + brute-force cosine | Vertex AI Matching Engine |
+| `ObjectStore` | local FS (atomic write) | GCS JSON API |
+| `EventLog` | redb + UNSYNCED index | Firestore subcollection |
+| `EmbeddingProvider` | fastembed 384-dim → zero-padded 768 | Vertex AI text-multilingual-embedding-002 768-dim |
+
+Embedding standard: 768-dim everywhere. Offline vectors are approximate; replaced by exact Vertex AI embeddings on sync.
+
+### runway-auth
+
+Firebase Auth Tower layer. Verifies Bearer tokens via Identity Toolkit, injects `AuthContext { uid, org_id, apps, role }` into Axum handlers via `Extension<AuthContext>`.
+
+```rust
+AuthLayer::new(FirebaseAuth::new(api_key))
+    .requiring_app("inkling")   // optional app-level entitlement check
+```
+
+`LOCAL_DEV=true` + `Bearer dev` → injects canned `AuthContext` without hitting Firebase.
+
+### runway-middleware
+
+Attaches the full HTTP stack to any Axum router and serves it on `PORT` (default 8080):
+
+```rust
+let app = stack(router);   // adds /health, request-id, OTel span, gzip, CORS, JSON error body
+serve(app).await;           // binds PORT, graceful SIGTERM
+```
+
+`ROUTE_PREFIX` env var: if set, routes are mounted under that prefix (e.g. `/api-server`).
+
+### runway-secrets
+
+GCP Secret Manager client. Secrets named `{env}-{app}-{key}` or `{env}-platform-{key}`.
+
+```rust
+let secrets = Secrets::from_env()?;          // reads PROJECT_ID, ENV, APP from env
+let key = secrets.get("firebase-api-key").await?;   // fetches + caches
+```
+
+`SecretString` is zeroized on drop. `SecretMap::require(key)` panics fast on missing secrets at startup.
+
+### runway-telemetry
+
+OTel tracing → Cloud Trace (OTLP/HTTP), Sentry error tracking, JSON structured logs. Call once at `main()` top, hold the guard for process lifetime:
+
+```rust
+let _guard = runway_telemetry::init(TelemetryConfig::from_env("api-server"))?;
+```
+
+`TelemetryGuard` flushes spans and Sentry events on drop (clean shutdown).
+
+---
 
 ## converge-llm engines
 
@@ -57,4 +126,7 @@ Runtime packaging expects Converge at `~/dev/reflective/stack/bedrock-platform/c
 | `storage` | Remote adapter registry |
 | `anthropic` | Anthropic provider bridge |
 
-See also: [[Stack/Burn and Local LLM]], converge `kb/Architecture/Crate Map`
+Runway pins Converge dependencies to Git tag `v3.4.0` by default.
+For local SDK work: `just use-local-converge` → patches to `../reflective/stack/bedrock-platform/converge`.
+
+See also: [[Building/Deployment]], [[Stack/Burn and Local LLM]], converge `kb/Architecture/Crate Map`

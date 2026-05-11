@@ -1,41 +1,86 @@
 ---
-source: llm
+source: mixed
 ---
 # Docker
 
-Container definitions for the Converge runtime and supporting services.
+Container definitions for the Converge runtime, api-server, and supporting services.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
 | `docker/Dockerfile` | Multi-stage build for `converge-runtime` |
+| `docker/Dockerfile.api-server` | Multi-stage build for `api-server` (runway-* reference service) |
 | `docker/compose.yaml` | Local dev stack |
+| `cloudbuild.api-server.yaml` | Cloud Build config for api-server |
 
-## Dockerfile
+---
+
+## Dockerfile.api-server
+
+Self-contained build — no external source required (unlike `converge-runtime`).
+
+```
+Builder:  rust:1.94-bookworm
+          cargo build -p api-server --release
+          (only api-server and its 5 runway-* deps are compiled)
+
+Runtime:  debian:bookworm-slim + ca-certificates + curl
+          /usr/local/bin/api-server
+          PORT=8080, LOCAL_DEV=true (override in Cloud Run)
+```
+
+Build via Cloud Build (recommended):
+```bash
+just api-deploy          # build + push + deploy Cloud Run
+just api-docker-build    # local Docker build only
+just api-docker-run      # run the Docker image locally
+```
+
+### .gcloudignore
+
+`Cargo.lock` is in `.gitignore` (library convention) but Cloud Build needs it for reproducible builds. `.gcloudignore` negates that exclusion:
+
+```
+#!include:.gitignore
+!Cargo.lock
+```
+
+---
+
+## Dockerfile (converge-runtime)
 
 Two-stage build:
-1. **Builder**: `rust:1.94-bookworm`, compiles `converge-runtime` with configurable features (default: `gcp,auth,firebase`)
-2. **Runtime**: `debian:bookworm-slim` + `ca-certificates` + `curl`, exposes port 8080
+1. **Builder** — `rust:1.94-bookworm`, compiles `converge-runtime --features gcp,auth,firebase`
+2. **Runtime** — `debian:bookworm-slim`, exposes port 8080
 
-Build arg: `CONVERGE_RUNTIME_FEATURES` controls which features are compiled in.
+Build context must contain the Converge repo root. `docker/compose.yaml` pulls it from `../../stack/bedrock-platform/converge`; `ops/scripts/dev-up.sh` resolves it to an absolute path.
 
-The Dockerfile expects the Converge repo root as its build context.
-`docker/compose.yaml` points there by default with `CONVERGE_ROOT=../../reflective/stack/bedrock-platform/converge`, and `ops/scripts/dev-up.sh` sets absolute paths automatically.
+---
 
-## Compose services
+## compose.yaml services
 
 | Service | Image | Port | Profile |
 |---------|-------|------|---------|
-| `converge-runtime` | Built from Dockerfile | 8080 | default |
+| `converge-runtime` | Built from `docker/Dockerfile` | 8080 | default |
 | `nats` | `nats:2.10-alpine` | 4222 | extras |
 | `surrealdb` | `surrealdb/surrealdb:latest` | 8000 | extras |
+| `ollama` | `ollama/ollama:latest` | 11434 | llm |
 
-SurrealDB runs in-memory mode with `root:root` credentials (dev only).
+```bash
+just docker-up                # converge-runtime only
+just docker-up-extras         # + nats + surrealdb
+# LLM: just mac-ollama-up     # native Ollama on Apple Silicon (avoids Docker for Metal)
+```
 
-## Known issues
+SurrealDB runs in-memory (`root:root`). NATS has no auth in dev.
 
-- Runtime image builds still require `~/dev/reflective/stack/bedrock-platform/converge` or an explicit `CONVERGE_ROOT`
-- No GPU-enabled Dockerfile for local dev (GPU Dockerfiles live in `ops/deploy/gpu/`)
+---
+
+## Cloud Build (api-server)
+
+`cloudbuild.api-server.yaml` builds the api-server image on an E2_HIGHCPU_8 machine with a 30-minute timeout. Substitution `_IMAGE_URI` receives the full Artifact Registry tag from the deploy script.
+
+First cold build takes ~5 minutes (all deps from scratch). Subsequent builds are faster because Cloud Build caches layers.
 
 See also: [[Building/Deployment]]
