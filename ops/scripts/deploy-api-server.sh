@@ -91,3 +91,16 @@ echo "SHA pinned:      https://${SHA_TAG}---${SERVICE_HOST}  (tag: $SHA_TAG)"
 echo ""
 echo "To freeze this version as a named route:"
 echo "  SERVICE_NAME=${SERVICE_NAME}-v$(echo "$CARGO_VERSION" | cut -d. -f1) ROUTE_PREFIX=${ROUTE_PREFIX}/v$(echo "$CARGO_VERSION" | cut -d. -f1) just api-deploy"
+
+echo ""
+echo "Registering in apps portal..."
+bash "$ROOT_DIR/ops/scripts/register-app.sh" \
+    --key        "api-server" \
+    --name       "API Server" \
+    --description "Runway reference service — auth, storage, telemetry" \
+    --path       "$ROUTE_PREFIX" \
+    --version    "$CARGO_VERSION" \
+    --sha        "$GIT_SHA"
+
+echo "Deploying apps portal..."
+(cd "$ROOT_DIR/ops/infra/firebase/apps" && firebase deploy --only hosting:apps-reflective-se --project "$PROJECT_ID" --non-interactive)

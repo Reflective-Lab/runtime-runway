@@ -1,10 +1,257 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Reflective Apps</title>
-  </head>
-  <body>
-    <p>apps.reflective.se</p>
-  </body>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reflective Apps</title>
+  <style>
+    :root {
+      --paper: #f3efe6;
+      --ink: #1f2430;
+      --ink-muted: #4d5768;
+      --ink-soft: #6f7b8f;
+      --line: rgba(31, 36, 48, 0.1);
+      --accent: #115e59;
+      --accent-soft: rgba(17, 94, 89, 0.1);
+      --panel: rgba(255, 250, 240, 0.85);
+      --shadow: 0 24px 80px rgba(31, 36, 48, 0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(17, 94, 89, 0.18), transparent 34%),
+        radial-gradient(circle at top right, rgba(154, 52, 18, 0.12), transparent 28%),
+        linear-gradient(180deg, #fffaf0 0%, #f3efe6 100%);
+    }
+
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+      display: grid;
+      gap: 32px;
+    }
+
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 28px 32px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-family: "Iowan Old Style", "Palatino Linotype", serif;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      font-weight: 700;
+      line-height: 0.95;
+      color: var(--ink);
+    }
+
+    .tagline {
+      max-width: 44ch;
+      color: var(--ink-muted);
+      line-height: 1.55;
+      font-size: 0.95rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+    }
+
+    .card:hover {
+      border-color: rgba(17, 94, 89, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 32px 80px rgba(31, 36, 48, 0.12);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .card h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--ink-soft);
+      opacity: 0.4;
+      flex-shrink: 0;
+      transition: background 0.3s, opacity 0.3s;
+    }
+
+    .status-dot.ok   { background: var(--accent); opacity: 1; }
+    .status-dot.err  { background: #9a3412; opacity: 1; }
+    .status-dot.spin { animation: pulse 1.4s ease-in-out infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.2; }
+      50%       { opacity: 0.9; }
+    }
+
+    .card p {
+      color: var(--ink-muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      flex: 1;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+
+    .version {
+      font-size: 0.75rem;
+      font-family: monospace;
+      color: var(--ink-soft);
+      background: rgba(31, 36, 48, 0.05);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 2px 7px;
+    }
+
+    .path {
+      font-size: 0.78rem;
+      color: var(--accent);
+      font-family: monospace;
+    }
+
+    .empty {
+      padding: 48px 32px;
+      border: 1px dashed var(--line);
+      border-radius: 18px;
+      text-align: center;
+      color: var(--ink-soft);
+    }
+
+    @media (max-width: 640px) {
+      header { display: grid; }
+      h1 { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <p class="eyebrow">Reflective</p>
+        <h1>Apps</h1>
+      </div>
+      <p class="tagline">Deployed services running on the Runway platform. Each app is independently versioned and available at a stable path.</p>
+    </header>
+
+    <div id="grid" class="grid">
+      <div class="empty">Loading apps…</div>
+    </div>
+  </main>
+
+  <script>
+    async function checkStatus(statusPath) {
+      if (!statusPath) return null
+      try {
+        const res = await fetch(statusPath)
+        return res.ok ? 'ok' : 'err'
+      } catch {
+        return 'err'
+      }
+    }
+
+    function renderCard(app, status) {
+      const dotClass = status === null ? '' : status === 'ok' ? 'ok' : 'err'
+      const spinClass = status === null && app.status_path ? 'spin' : ''
+      return `
+        <a class="card" href="${app.path}/">
+          <div class="card-top">
+            <h2>${app.name}</h2>
+            <span class="status-dot ${dotClass} ${spinClass}" title="${status ?? (app.status_path ? 'checking…' : 'no health endpoint')}"></span>
+          </div>
+          <p>${app.description}</p>
+          <div class="card-meta">
+            <span class="version">v${app.version} · ${app.sha}</span>
+            <span class="path">${app.path}</span>
+          </div>
+        </a>
+      `
+    }
+
+    async function load() {
+      const grid = document.getElementById('grid')
+
+      let data
+      try {
+        const res = await fetch('/apps.json')
+        data = await res.json()
+      } catch (e) {
+        grid.innerHTML = '<div class="empty">Could not load app registry.</div>'
+        return
+      }
+
+      const apps = data.apps ?? []
+      if (!apps.length) {
+        grid.innerHTML = '<div class="empty">No apps deployed yet.</div>'
+        return
+      }
+
+      // Render immediately with spinning dots, then update status
+      grid.innerHTML = apps.map(a => renderCard(a, a.status_path ? null : undefined)).join('')
+
+      // Check all status endpoints in parallel, update dots in place
+      const cards = grid.querySelectorAll('.card')
+      await Promise.all(apps.map(async (app, i) => {
+        const dot = cards[i]?.querySelector('.status-dot')
+        if (!dot || !app.status_path) return
+        const status = await checkStatus(app.status_path)
+        dot.classList.remove('spin')
+        dot.classList.add(status)
+        dot.title = status === 'ok' ? 'online' : 'unreachable'
+      }))
+    }
+
+    load()
+  </script>
+</body>
 </html>

@@ -1,0 +1,24 @@
+{
+  "apps": [
+    {
+      "key": "api-server",
+      "name": "API Server",
+      "description": "Runway reference service — auth, storage, telemetry",
+      "path": "/api-server",
+      "status_path": null,
+      "version": "3.4.1",
+      "sha": "ef08fd3",
+      "deployed_at": "2026-05-11T16:00:00Z"
+    },
+    {
+      "key": "catalyst",
+      "name": "Catalyst",
+      "description": "Business ops workflows with human approval gates",
+      "path": "/catalyst",
+      "status_path": "/catalyst/status",
+      "version": "0.1.0",
+      "sha": "b391f8f",
+      "deployed_at": "2026-05-11T17:00:00Z"
+    }
+  ]
+}

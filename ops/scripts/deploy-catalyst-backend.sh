@@ -155,3 +155,17 @@ echo "Deployed:        $SERVICE_URL"
 echo "Health:          $SERVICE_URL/health"
 echo "Version pinned:  https://${VERSION_TAG}---${SERVICE_HOST}"
 echo "SHA pinned:      https://${SHA_TAG}---${SERVICE_HOST}"
+
+echo ""
+echo "Registering in apps portal..."
+bash "$ROOT_DIR/ops/scripts/register-app.sh" \
+    --key        "catalyst" \
+    --name       "Catalyst" \
+    --description "Business ops workflows with human approval gates" \
+    --path       "$ROUTE_PREFIX" \
+    --status-path "${ROUTE_PREFIX}/status" \
+    --version    "$CARGO_VERSION" \
+    --sha        "$GIT_SHA"
+
+echo "Deploying apps portal..."
+(cd "$ROOT_DIR/ops/infra/firebase/apps" && firebase deploy --only hosting:apps-reflective-se --project "$PROJECT_ID" --non-interactive)
