@@ -95,12 +95,13 @@ echo "  SERVICE_NAME=${SERVICE_NAME}-v$(echo "$CARGO_VERSION" | cut -d. -f1) ROU
 echo ""
 echo "Registering in apps portal..."
 bash "$ROOT_DIR/ops/scripts/register-app.sh" \
-    --key        "api-server" \
-    --name       "API Server" \
+    --key         "api-server" \
+    --name        "API Server" \
     --description "Runway reference service — auth, storage, telemetry" \
-    --path       "$ROUTE_PREFIX" \
-    --version    "$CARGO_VERSION" \
-    --sha        "$GIT_SHA"
+    --path        "$ROUTE_PREFIX" \
+    --status-path "${ROUTE_PREFIX}/status" \
+    --version     "$CARGO_VERSION" \
+    --sha         "$GIT_SHA"
 
 echo "Deploying apps portal..."
 (cd "$ROOT_DIR/ops/infra/firebase/apps" && firebase deploy --only hosting:apps-reflective-se --project "$PROJECT_ID" --non-interactive)

@@ -43,6 +43,8 @@ async fn main() -> Result<()> {
         storage: Arc::new(storage),
     };
 
+    let public = Router::new().route("/status", get(status));
+
     let protected = Router::new()
         .route("/api/me", get(me))
         .route("/api/events", get(list_events).post(append_event))
@@ -54,8 +56,10 @@ async fn main() -> Result<()> {
     // apps.reflective.se/api-server/** route to this service.
     // /health always stays at root for Cloud Run health checks.
     let routed = match std::env::var("ROUTE_PREFIX") {
-        Ok(prefix) if !prefix.is_empty() => Router::new().nest(&prefix, protected),
-        _ => protected,
+        Ok(prefix) if !prefix.is_empty() => {
+            Router::new().nest(&prefix, public.merge(protected))
+        }
+        _ => public.merge(protected),
     };
 
     let app = stack(routed);
@@ -63,6 +67,14 @@ async fn main() -> Result<()> {
     info!("api-server starting");
     serve(app).await;
     Ok(())
+}
+
+async fn status() -> Json<Value> {
+    Json(json!({
+        "status": "ok",
+        "service": "api-server",
+        "version": env!("CARGO_PKG_VERSION"),
+    }))
 }
 
 async fn me(Extension(ctx): Extension<AuthContext>) -> Json<Value> {

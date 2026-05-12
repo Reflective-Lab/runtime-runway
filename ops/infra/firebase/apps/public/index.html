@@ -203,8 +203,9 @@
     function renderCard(app, status) {
       const dotClass = status === null ? '' : status === 'ok' ? 'ok' : 'err'
       const spinClass = status === null && app.status_path ? 'spin' : ''
+      const href = app.link ?? (app.status_path ?? (app.path + '/'))
       return `
-        <a class="card" href="${app.path}/">
+        <a class="card" href="${href}">
           <div class="card-top">
             <h2>${app.name}</h2>
             <span class="status-dot ${dotClass} ${spinClass}" title="${status ?? (app.status_path ? 'checking…' : 'no health endpoint')}"></span>
