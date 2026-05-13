@@ -40,6 +40,7 @@ Entity catalog for the Runway knowledge base. Update when projects, crates, serv
 |---------|---------|
 | [[Architecture/Application]] | CLI/TUI binary |
 | [[Architecture/Crate Map]] | Crate layout and deps |
+| [[Architecture/Security]] | Auth, JWT, CORS, webhook, open issues |
 | [[Building/Deployment]] | Deploy guide |
 | [[Building/Docker]] | Container definitions |
 | [[Stack/Burn and Local LLM]] | Inference engines |

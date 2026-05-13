@@ -10,13 +10,14 @@ Runway hosts two categories of crates: Converge distribution crates (application
 ## Crates
 
 ```
-api-server               → all 5 runway-* crates         Reference Cloud Run service;
+api-server               → all runway-* crates            Reference Cloud Run service;
                                                           proves deployment end-to-end
 
 converge-application     → converge-core, converge-experience,    CLI/TUI distribution
                            converge-provider + optional subsystems
 converge-llm             → converge-core, converge-domain          Local LLM inference (Burn)
 
+runway-accounts          → runway-{auth,storage}, reqwest, hmac    Account + org + Stripe billing
 runway-storage           → redb, reqwest, fastembed, serde_json    StorageKit: DocumentStore +
                                                                     VectorStore + ObjectStore +
                                                                     EventLog + EmbeddingProvider
@@ -37,6 +38,17 @@ reflective/runway/crates/runway-*     ──→  (no converge dependency)
 ```
 
 ## runway-* crate reference
+
+### runway-accounts
+
+User, organisation, and Stripe billing management. Exposed as two router bundles:
+
+```rust
+runway_accounts::public_routes(state)     // POST /v1/billing/webhooks/stripe (HMAC-verified)
+runway_accounts::protected_routes(state)  // /v1/accounts/me, /v1/orgs/:id, /v1/billing/*
+```
+
+Data is stored in Firestore (production) or redb (LOCAL_DEV) via `runway-storage`. Custom claims are updated via the Firebase Admin REST API after subscription changes. See [[Architecture/Security]] for the full auth model.
 
 ### runway-storage
 
