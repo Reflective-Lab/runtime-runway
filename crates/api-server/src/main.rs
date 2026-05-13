@@ -3,6 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use axum::{Extension, Json, Router, extract::State, http::StatusCode, routing::get};
 use chrono::Utc;
+use runway_accounts::AccountsState;
 use runway_auth::{AuthContext, AuthLayer, FirebaseAuth};
 use runway_middleware::{serve, stack};
 use runway_storage::{
@@ -34,22 +35,34 @@ async fn main() -> Result<()> {
         RemoteStorageKit::build(RemoteConfig::from_env()?).await?
     };
 
-    let firebase_api_key = std::env::var("FIREBASE_API_KEY").unwrap_or_else(|_| "dev-key".into());
+    let storage = Arc::new(storage);
 
+    let firebase_api_key = std::env::var("FIREBASE_API_KEY").unwrap_or_else(|_| "dev-key".into());
     let auth = FirebaseAuth::new(firebase_api_key);
     let auth_layer = AuthLayer::new(auth);
 
-    let state = AppState {
-        storage: Arc::new(storage),
-    };
+    let accounts = AccountsState::new(Arc::clone(&storage));
 
-    let public = Router::new().route("/status", get(status));
+    // Public routes: no auth required.
+    let public = Router::new()
+        .route("/status", get(status))
+        .merge(runway_accounts::public_routes(accounts.clone()));
 
-    let protected = Router::new()
+    // Protected API routes — served with AppState.
+    let api_protected: Router<()> = Router::new()
         .route("/api/me", get(me))
         .route("/api/events", get(list_events).post(append_event))
-        .layer(auth_layer)
-        .with_state(state);
+        .with_state(AppState {
+            storage: Arc::clone(&storage),
+        });
+
+    // Protected accounts routes — served with AccountsState (already called with_state).
+    let accounts_protected: Router<()> = runway_accounts::protected_routes(accounts);
+
+    // Merge all protected routes then apply the auth layer once.
+    let protected = api_protected
+        .merge(accounts_protected)
+        .layer(auth_layer);
 
     // ROUTE_PREFIX=/api-server mounts all routes under that path.
     // Firebase Hosting rewrites pass the full path through, so this lets

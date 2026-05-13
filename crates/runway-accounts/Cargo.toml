@@ -1,0 +1,25 @@
+[package]
+name = "runway-accounts"
+description = "Account, organisation, and billing management for the Reflective platform"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+runway-auth = { path = "../runway-auth" }
+runway-storage = { path = "../runway-storage" }
+
+anyhow.workspace = true
+async-trait.workspace = true
+axum.workspace = true
+chrono.workspace = true
+hmac.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+uuid.workspace = true

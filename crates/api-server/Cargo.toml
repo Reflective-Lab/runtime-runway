@@ -11,6 +11,7 @@ name = "api-server"
 path = "src/main.rs"
 
 [dependencies]
+runway-accounts = { path = "../runway-accounts" }
 runway-auth = { path = "../runway-auth" }
 runway-middleware = { path = "../runway-middleware" }
 runway-secrets = { path = "../runway-secrets" }

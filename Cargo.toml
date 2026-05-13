@@ -4,6 +4,7 @@ members = [
     "crates/api-server",
     "crates/application",
     "crates/llm",
+    "crates/runway-accounts",
     "crates/runway-auth",
     "crates/runway-middleware",
     "crates/runway-secrets",
@@ -41,6 +42,7 @@ converge-storage = { git = "https://github.com/Reflective-Lab/converge", tag = "
 # Internal
 converge-llm = { path = "crates/llm" }
 converge-application = { path = "crates/application" }
+runway-accounts = { path = "crates/runway-accounts" }
 runway-auth = { path = "crates/runway-auth" }
 runway-middleware = { path = "crates/runway-middleware" }
 runway-secrets = { path = "crates/runway-secrets" }
@@ -86,6 +88,7 @@ regex = "1.11"
 reqwest = { version = "0.12", features = ["blocking", "json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
+hmac = "0.12"
 sha2 = "0.10"
 strum = { version = "0.26", features = ["derive"] }
 tempfile = "3"

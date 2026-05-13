@@ -1,0 +1,57 @@
+pub mod claims;
+pub mod domain;
+pub mod error;
+pub mod store;
+pub mod stripe;
+mod http;
+
+pub use claims::ClaimsService;
+pub use domain::{Account, Org, Plan};
+pub use error::AccountError;
+pub use store::AccountStore;
+pub use stripe::StripeClient;
+
+use std::sync::Arc;
+
+use axum::{Router, routing};
+use runway_storage::StorageKit;
+
+#[derive(Clone)]
+pub struct AccountsState {
+    pub store: AccountStore,
+    pub stripe: StripeClient,
+    pub claims: ClaimsService,
+}
+
+impl AccountsState {
+    pub fn new(storage: Arc<StorageKit>) -> Self {
+        let client = reqwest::Client::new();
+        Self {
+            store: AccountStore::new(storage),
+            stripe: StripeClient::new(client.clone()),
+            claims: ClaimsService::new(client),
+        }
+    }
+}
+
+/// Public routes — no auth required. Webhook HMAC-verified internally.
+pub fn public_routes(state: AccountsState) -> Router {
+    Router::new()
+        .route(
+            "/v1/billing/webhooks/stripe",
+            routing::post(http::billing::stripe_webhook),
+        )
+        .with_state(state)
+}
+
+/// Protected routes — caller must supply a valid Firebase Bearer token.
+/// Wire these behind your `AuthLayer` before merging into the main router.
+pub fn protected_routes(state: AccountsState) -> Router {
+    Router::new()
+        .route("/v1/accounts/me", routing::get(http::accounts::get_me))
+        .route("/v1/orgs/:org_id", routing::get(http::orgs::get_org))
+        .route("/v1/billing/summary", routing::get(http::billing::billing_summary))
+        .route("/v1/billing/checkout", routing::post(http::billing::create_checkout))
+        .route("/v1/billing/portal", routing::post(http::billing::create_portal))
+        .with_state(state)
+}
