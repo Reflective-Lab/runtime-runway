@@ -13,12 +13,18 @@ resource "google_storage_bucket" "app" {
   }
 
   lifecycle_rule {
-    condition  { age = 90 }
-    action { type = "SetStorageClass"; storage_class = "NEARLINE" }
+    condition { age = 90 }
+    action {
+      type          = "SetStorageClass"
+      storage_class = "NEARLINE"
+    }
   }
   lifecycle_rule {
-    condition  { age = 365 }
-    action { type = "SetStorageClass"; storage_class = "COLDLINE" }
+    condition { age = 365 }
+    action {
+      type          = "SetStorageClass"
+      storage_class = "COLDLINE"
+    }
   }
 
   labels = {

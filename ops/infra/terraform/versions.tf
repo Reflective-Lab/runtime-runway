@@ -12,11 +12,10 @@ terraform {
     }
   }
 
-  # Uncomment after running ops/infra/scripts/bootstrap.sh:
-  # backend "gcs" {
-  #   bucket = "YOUR_PROJECT_ID-tf-state"
-  #   prefix = "terraform/reflective"
-  # }
+  backend "gcs" {
+    bucket = "reflective-labs-platform-prod-tf-state"
+    prefix = "terraform/platform/prod"
+  }
 }
 
 provider "google" {

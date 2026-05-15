@@ -39,8 +39,11 @@ resource "google_storage_bucket" "releases" {
 
   # Move artifacts older than 2 years to Coldline
   lifecycle_rule {
-    condition  { age = 730 }
-    action { type = "SetStorageClass"; storage_class = "COLDLINE" }
+    condition { age = 730 }
+    action {
+      type          = "SetStorageClass"
+      storage_class = "COLDLINE"
+    }
   }
 
   # CORS for browser-based download pages
