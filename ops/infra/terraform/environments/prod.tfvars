@@ -6,5 +6,5 @@ spanner_config  = "regional-europe-west1"
 redis_tier      = "BASIC"
 redis_memory_gb = 1
 
-releases_domain   = "releases.reflective.app"
+releases_domain   = "releases.reflective.se"
 releases_location = "EU"

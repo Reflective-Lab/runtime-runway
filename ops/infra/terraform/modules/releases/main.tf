@@ -106,11 +106,15 @@ resource "google_compute_url_map" "releases" {
 
 # Managed SSL cert — Google provisions and renews automatically
 resource "google_compute_managed_ssl_certificate" "releases" {
-  project = var.project_id
-  name    = "reflective-${var.env}-releases-cert"
+  project     = var.project_id
+  name        = "reflective-${var.env}-releases-cert"
 
   managed {
     domains = [var.domain]
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
