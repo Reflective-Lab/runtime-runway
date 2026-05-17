@@ -53,6 +53,10 @@ impl AuthContext {
     pub fn has_app(&self, app: &str) -> bool {
         self.claims.has_app(app)
     }
+
+    pub fn is_admin(&self) -> bool {
+        matches!(self.claims.role.as_deref(), Some("admin"))
+    }
 }
 
 /// Tower layer that validates a Firebase Bearer token and injects `AuthContext`.

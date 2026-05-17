@@ -2,7 +2,7 @@ use axum::{Extension, Json, extract::State};
 use runway_auth::AuthContext;
 use serde::Serialize;
 
-use crate::{AccountsState, domain::{Account, Org}, error::AccountError};
+use crate::{AccountsState, domain::{Account, Org, OrgMember, Role}, error::AccountError};
 
 #[derive(Serialize)]
 pub struct MeResponse {
@@ -36,12 +36,21 @@ async fn provision(uid: &str, email: Option<&str>, state: &AccountsState) -> Res
     let org = Org::new_personal(uid);
     state.store.upsert_org(&org).await?;
 
+    // Billing owner is always admin.
+    let member = OrgMember::new_owner(&org.org_id, uid);
+    state.store.upsert_member(&member).await?;
+
     let mut account = Account::new(uid);
     account.email = email.map(str::to_string);
     account.org_id = Some(org.org_id.clone());
     state.store.upsert_account(&account).await?;
 
-    state.claims.mint_in_background(uid.to_string(), org.org_id, vec![]);
+    state.claims.mint_in_background(
+        uid.to_string(),
+        org.org_id,
+        vec![],
+        Role::Admin.as_str().to_string(),
+    );
 
     Ok(account)
 }

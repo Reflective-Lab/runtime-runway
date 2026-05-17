@@ -129,6 +129,10 @@ pub async fn create_portal(
     Extension(ctx): Extension<AuthContext>,
     Json(req): Json<PortalRequest>,
 ) -> Result<Json<Value>, AccountError> {
+    if !ctx.is_admin() {
+        return Err(AccountError::Forbidden);
+    }
+
     let account = state
         .store
         .get_account(ctx.uid())
@@ -276,6 +280,7 @@ async fn handle_subscription_updated(state: &AccountsState, subscription: &Value
         org.billing_owner_uid.clone(),
         org.org_id.clone(),
         org.apps.clone(),
+        crate::domain::Role::Admin.as_str().to_string(),
     );
 
     tracing::info!(
@@ -310,6 +315,7 @@ async fn handle_subscription_deleted(state: &AccountsState, subscription: &Value
         org.billing_owner_uid.clone(),
         org.org_id.clone(),
         vec![],
+        crate::domain::Role::Admin.as_str().to_string(),
     );
 
     tracing::info!(org_id = org.org_id, "subscription canceled");

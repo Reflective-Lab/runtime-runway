@@ -179,6 +179,6 @@ Configured in `runway-middleware::stack` via `ALLOWED_ORIGINS` (comma-separated)
 1. ~~**Offline JWT verification**~~ ✅ Done — RS256 + JWKS cache in `runway-auth/src/firebase.rs`
 2. ~~**Lock `ALLOWED_ORIGINS`**~~ ✅ Done — startup assertion in `api-server/src/main.rs`
 3. ~~**Guard `STRIPE_WEBHOOK_SECRET`**~~ ✅ Done — startup assertion in `api-server/src/main.rs`
-4. **Role enforcement** — `role` claim is minted and stored but no handler checks it; needed before team/admin features ship.
+4. ~~**Role enforcement**~~ ✅ Done — `role` minted into claims on provision and invite accept; `ctx.is_admin()` guards billing portal, invite management, and member management routes.
 
 See also: [[Architecture/Crate Map]], [[Architecture/Application]], [[Building/Deployment]]
