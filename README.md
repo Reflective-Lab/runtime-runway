@@ -4,6 +4,23 @@ Distribution, deployment, and infrastructure for the [Converge](https://github.c
 
 Runway owns everything needed to **run, package, and deploy** Converge. The SDK stays pure; Runway handles the messy reality of binaries, containers, GPUs, and cloud services.
 
+## Relationship to Movement
+
+Runway and [Movement](../movement/commerce-rails/) are sibling authorities with a clean boundary:
+
+| Question | Owner |
+|---|---|
+| Who can log in? Where does code run? Where do secrets live? | **Runway** |
+| Who pays? What is owed? What is granted? What must be reconciled? | **Movement** |
+
+Runway owns canonical users, orgs, auth, membership, deployments, secrets, and runtime substrate. Movement (Commerce Rails) owns subscriptions, entitlements, billing, revenue-share, payouts, and reconciliation.
+
+Stripe crosses both: Runway routes the webhook, holds the signing secret, and provides runtime observability. Movement verifies the provider semantics, records receipts, and decides commercial state.
+
+See [`kb/Architecture/Movement Boundary.md`](kb/Architecture/Movement%20Boundary.md) for the full authority table.
+
+---
+
 ## A New World
 
 The old world shipped instructions; the new world ships intent-driven, governed runtimes. Models and orchestration turn declared intent into decisions at runtime — but only if the runtime, the providers, the GPUs, and the deployment surface actually exist in the messy real world. Runway owns that messy world.
@@ -17,7 +34,9 @@ reflective/runway/
   crates/
     application/        The `converge` CLI/TUI binary
     llm/                Local LLM inference (Burn, llama.cpp)
-    runway-auth/        Firebase Auth middleware (Tower Layer)
+    api-server/         Cloud Run reference binary (wires all runway-* crates)
+    runway-accounts/    Users, orgs, invites, roles, and Stripe billing
+    runway-auth/        Firebase Auth middleware (Tower Layer, offline JWKS)
     runway-middleware/  Axum request-id, trace, CORS, compression stack
     runway-secrets/     GCP Secret Manager client (SecretString, zeroized)
     runway-storage/     StorageKit — DocumentStore, VectorStore, ObjectStore, EventLog, EmbeddingProvider
@@ -118,6 +137,29 @@ let kit = StorageKit::remote(RemoteConfig::from_env()?).await?;
 
 Offline vectors are zero-padded to 768 dims for index compatibility with remote Vertex AI vectors.
 When the Tauri app goes online, it re-embeds via VertexEmbedder to replace approximations.
+
+### runway-accounts
+
+Users, organisations, team invites, roles, and Stripe billing — the canonical identity and membership layer.
+
+Routes (all under `runway_accounts::protected_routes()`, behind `AuthLayer`):
+
+| Method | Path | Auth |
+|--------|------|------|
+| `GET` | `/v1/accounts/me` | any token — provisions on first access |
+| `GET` | `/v1/orgs/:org_id` | member or billing owner |
+| `GET` | `/v1/orgs/:org_id/members` | admin |
+| `DELETE` | `/v1/orgs/:org_id/members/:uid` | admin (billing owner protected) |
+| `POST` | `/v1/orgs/:org_id/invites` | admin |
+| `GET` | `/v1/orgs/:org_id/invites` | admin |
+| `POST` | `/v1/invites/:token/accept` | any authed user |
+| `GET` | `/v1/billing/summary` | any member |
+| `POST` | `/v1/billing/checkout` | any member |
+| `POST` | `/v1/billing/portal` | admin |
+
+The Stripe webhook (`/v1/billing/webhooks/stripe`) is public, HMAC-verified internally, and mounted via `runway_accounts::public_routes()`.
+
+**Runway owns identity and transport.** The commercial meaning of subscription events — what the org is entitled to, revenue-share, payout — belongs to [Movement](../movement/commerce-rails/).
 
 ### runway-auth
 

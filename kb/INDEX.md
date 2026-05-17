@@ -40,6 +40,7 @@ Entity catalog for the Runway knowledge base. Update when projects, crates, serv
 |---------|---------|
 | [[Architecture/Application]] | CLI/TUI binary |
 | [[Architecture/Crate Map]] | Crate layout and deps |
+| [[Architecture/Movement Boundary]] | Runway vs. Movement authority split, Stripe ownership, org model |
 | [[Architecture/Security]] | Auth, JWT, CORS, webhook, open issues |
 | [[Building/Deployment]] | Deploy guide |
 | [[Operations/Secrets]] | Secret rotation, GCP projects, migration intent |
