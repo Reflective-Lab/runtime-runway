@@ -37,8 +37,19 @@ async fn main() -> Result<()> {
 
     let storage = Arc::new(storage);
 
-    let firebase_api_key = std::env::var("FIREBASE_API_KEY").unwrap_or_else(|_| "dev-key".into());
-    let auth = FirebaseAuth::new(firebase_api_key);
+    if !local_dev {
+        assert!(
+            std::env::var("STRIPE_WEBHOOK_SECRET").map(|v| !v.is_empty()).unwrap_or(false),
+            "STRIPE_WEBHOOK_SECRET must be set in production (empty value disables HMAC verification)"
+        );
+        assert!(
+            std::env::var("ALLOWED_ORIGINS").map(|v| !v.is_empty()).unwrap_or(false),
+            "ALLOWED_ORIGINS must be set in production (e.g. https://apps.reflective.se)"
+        );
+    }
+
+    let project_id = std::env::var("FIREBASE_PROJECT_ID").unwrap_or_else(|_| "dev-project".into());
+    let auth = FirebaseAuth::new(project_id);
     let auth_layer = AuthLayer::new(auth);
 
     let accounts = AccountsState::new(Arc::clone(&storage));

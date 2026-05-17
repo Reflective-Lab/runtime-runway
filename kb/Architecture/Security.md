@@ -30,15 +30,17 @@ Client                    api-server                     Firebase
   │◄──────────────────────────│                              │
 ```
 
-The verification is **online** — every request makes one outbound call to `identitytoolkit.googleapis.com/v1/accounts:lookup`. This means:
+The verification is **offline** — `runway-auth` verifies the RS256 signature locally using Google's public JWKS, with no outbound call per request.
 
-- Token revocation is effective immediately (Firebase checks its own user DB)
-- There is no local signature verification; a revoked user is blocked without waiting for token expiry
-- One extra network round-trip per request (~20–50 ms depending on region)
+**Verification flow:**
+1. Decode the JWT header to extract `kid`
+2. Look up the matching JWK from the in-memory cache (TTL: 1 hour); fetch from Google if missing or expired
+3. Verify RS256 signature, `iss` (`https://securetoken.google.com/{project_id}`), `aud` (project_id), and `exp`
+4. Extract `sub` → `uid`, `email`, and custom claims (`org_id`, `apps`, `role`) from the payload
+
+**Trade-off vs. online verification:** Revoked tokens remain valid until expiry (up to 1 hour). Acceptable for this use case — Firebase ID tokens are short-lived and logout is handled client-side.
 
 **Token lifetime:** Firebase ID tokens expire after 1 hour. Clients must call `firebase.auth().currentUser.getIdToken(true)` to refresh before expiry.
-
-> **Known improvement path:** Replace `accounts:lookup` with offline JWKS signature verification (`jsonwebtoken` crate + Firebase public key cache). Removes the per-request hop; token revocation window becomes up to 1 hour unless explicitly checked. See `runway-auth/src/firebase.rs` — comment already marks this.
 
 ---
 
@@ -154,7 +156,7 @@ This must never reach a deployed environment. The `LOCAL_DEV` env var is the sol
 
 Configured in `runway-middleware::stack` via `ALLOWED_ORIGINS` (comma-separated). If unset, `AllowOrigin::any()` applies — open to all origins.
 
-**Production requirement:** set `ALLOWED_ORIGINS=https://apps.reflective.se` (and any app subdomains) before public launch.
+`api-server` asserts `ALLOWED_ORIGINS` is non-empty at startup when `LOCAL_DEV` is not set.
 
 ---
 
@@ -162,21 +164,21 @@ Configured in `runway-middleware::stack` via `ALLOWED_ORIGINS` (comma-separated)
 
 | Var | Purpose | Required in prod |
 |-----|---------|-----------------|
-| `FIREBASE_API_KEY` | Identity Toolkit auth | Yes |
+| `FIREBASE_PROJECT_ID` | JWKS iss/aud validation | Yes |
 | `STRIPE_SECRET_KEY` | Stripe API access | Yes |
-| `STRIPE_WEBHOOK_SECRET` | Webhook HMAC verification | Yes — empty disables verification |
+| `STRIPE_WEBHOOK_SECRET` | Webhook HMAC verification | Yes — startup assertion fails if empty |
 | `STRIPE_PRICE_STARTER_MONTHLY` | Plan mapping in webhook handler | Yes |
 | `STRIPE_PRICE_TEAM_MONTHLY` | Plan mapping in webhook handler | Yes |
-| `ALLOWED_ORIGINS` | CORS allowed origins | Yes — unset = open |
+| `ALLOWED_ORIGINS` | CORS allowed origins | Yes — startup assertion fails if empty |
 | `LOCAL_DEV` | Dev bypass (never in prod) | Must be absent or false |
 
 ---
 
 ## Open issues before public launch
 
-1. **Offline JWT verification** — replace `accounts:lookup` with JWKS + signature check; eliminates per-request Firebase call and gives sub-millisecond verification.
-2. **Lock `ALLOWED_ORIGINS`** — currently open if unset; must be set to exact prod domain.
-3. **Guard `STRIPE_WEBHOOK_SECRET`** — add startup assertion; currently a missing secret silently disables HMAC.
+1. ~~**Offline JWT verification**~~ ✅ Done — RS256 + JWKS cache in `runway-auth/src/firebase.rs`
+2. ~~**Lock `ALLOWED_ORIGINS`**~~ ✅ Done — startup assertion in `api-server/src/main.rs`
+3. ~~**Guard `STRIPE_WEBHOOK_SECRET`**~~ ✅ Done — startup assertion in `api-server/src/main.rs`
 4. **Role enforcement** — `role` claim is minted and stored but no handler checks it; needed before team/admin features ship.
 
 See also: [[Architecture/Crate Map]], [[Architecture/Application]], [[Building/Deployment]]
