@@ -12,7 +12,11 @@ pub async fn get_org(
     Extension(ctx): Extension<AuthContext>,
     Path(org_id): Path<String>,
 ) -> Result<Json<Org>, AccountError> {
-    let org = state.store.get_org(&org_id).await?.ok_or(AccountError::NotFound)?;
+    let org = state
+        .store
+        .get_org(&org_id)
+        .await?
+        .ok_or(AccountError::NotFound)?;
 
     // Require caller to be the billing owner, or have a matching org_id claim.
     let caller_owns = org.billing_owner_uid == ctx.uid();

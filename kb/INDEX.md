@@ -12,6 +12,7 @@ Entity catalog for the Runway knowledge base. Update when projects, crates, serv
 |--------|------|----------|
 | converge-application | binary | `crates/application/` |
 | converge-llm | library + binary | `crates/llm/` |
+| runway-app-host | library | `crates/runway-app-host/` |
 
 ## Infrastructure
 
@@ -39,6 +40,7 @@ Entity catalog for the Runway knowledge base. Update when projects, crates, serv
 | Section | Purpose |
 |---------|---------|
 | [[Architecture/Application]] | CLI/TUI binary |
+| [[Architecture/App Execution Container]] | Canonical app backend host and Runway/Helm/app split |
 | [[Architecture/Crate Map]] | Crate layout and deps |
 | [[Architecture/Movement Boundary]] | Runway vs. Movement authority split, Stripe ownership, org model |
 | [[Architecture/Security]] | Auth, JWT, CORS, webhook, open issues |

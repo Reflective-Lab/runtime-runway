@@ -10,6 +10,7 @@ Distribution, deployment, and infrastructure for the Converge stack. Separated f
 | Area | Purpose | Directory |
 |------|---------|-----------|
 | [[Architecture/Application]] | Converge CLI/TUI binary | `crates/application/` |
+| [[Architecture/App Execution Container]] | Standard app backend host | `crates/runway-app-host/` |
 | [[Stack/Burn and Local LLM]] | Local inference (Burn, llama.cpp) | `crates/llm/` |
 | [[Building/Docker]] | Container definitions | `docker/` |
 | [[Building/Deployment]] | Deploy scripts, GPU infra | `ops/` |
@@ -33,4 +34,5 @@ Distribution, deployment, and infrastructure for the Converge stack. Separated f
 
 - [[Building/Deployment]] — full deployment guide
 - [[Architecture/Crate Map]] — what crates live here and their deps
+- [[Architecture/App Execution Container]] — standard Runway host for Helm and marquee apps
 - Converge SDK: `~/dev/reflective/stack/bedrock-platform/converge/kb/`

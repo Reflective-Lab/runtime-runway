@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # Deploy catalyst-backend to Cloud Run.
 #
-# catalyst-backend has path deps on runway crates (../../../../runway/crates/).
+# catalyst-backend has path deps on runway crates (../../../runway/crates/).
 # Cloud Build can't access sibling repos, so this script stages both trees
 # under a common root that matches the relative path structure before submitting.
 #
 # Staged layout:
 #   staging/
 #     runway/crates/        ← runway infra crates
-#     stack/marquee-apps/catalyst-biz/   ← catalyst source
+#     marquee-apps/catalyst-biz/   ← catalyst source
 #     Dockerfile
 #     cloudbuild.yaml
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CATALYST_ROOT="${CATALYST_ROOT:-$(cd "$ROOT_DIR/../stack/marquee-apps/catalyst-biz" && pwd)}"
+CATALYST_ROOT="${CATALYST_ROOT:-$(cd "$ROOT_DIR/../marquee-apps/catalyst-biz" && pwd)}"
 PROJECT_ID="${PROJECT_ID:-wolfgang-kb-prod}"
 REGION="${REGION:-europe-west1}"
 SERVICE_NAME="${SERVICE_NAME:-catalyst-backend}"
@@ -56,7 +56,7 @@ cp "$ROOT_DIR/Cargo.lock" "$STAGING/runway/Cargo.lock"
 cp -R "$ROOT_DIR/crates" "$STAGING/runway/crates"
 
 # Stage catalyst-biz (exclude build artifacts and node_modules)
-mkdir -p "$STAGING/stack/marquee-apps"
+mkdir -p "$STAGING/marquee-apps"
 rsync -a \
     --exclude='target/' \
     --exclude='node_modules/' \
@@ -64,20 +64,20 @@ rsync -a \
     --exclude='.svelte-kit/' \
     --exclude='build/' \
     --exclude='dist/' \
-    "$CATALYST_ROOT/" "$STAGING/stack/marquee-apps/catalyst-biz/"
+    "$CATALYST_ROOT/" "$STAGING/marquee-apps/catalyst-biz/"
 
 # Dockerfile — WORKDIR matches the path dep structure:
-#   /build/stack/marquee-apps/catalyst-biz/backend/Cargo.toml
-#   path = "../../../../runway/crates/runway-auth"
+#   /build/marquee-apps/catalyst-biz/backend/Cargo.toml
+#   path = "../../../runway/crates/runway-auth"
 #   resolves to /build/runway/crates/runway-auth ✓
 cat > "$STAGING/Dockerfile" << 'DOCKERFILE'
 FROM rust:1.94-bookworm AS builder
 
 WORKDIR /build
 COPY runway/ runway/
-COPY stack/ stack/
+COPY marquee-apps/ marquee-apps/
 
-WORKDIR /build/stack/marquee-apps/catalyst-biz
+WORKDIR /build/marquee-apps/catalyst-biz
 RUN cargo build -p catalyst-backend --release
 
 FROM debian:bookworm-slim
@@ -87,7 +87,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY --from=builder /build/stack/marquee-apps/catalyst-biz/target/release/catalyst-backend /usr/local/bin/catalyst-backend
+COPY --from=builder /build/marquee-apps/catalyst-biz/target/release/catalyst-backend /usr/local/bin/catalyst-backend
 
 ENV RUST_LOG=info
 ENV PORT=8080

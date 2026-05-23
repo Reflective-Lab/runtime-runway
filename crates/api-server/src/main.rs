@@ -39,11 +39,15 @@ async fn main() -> Result<()> {
 
     if !local_dev {
         assert!(
-            std::env::var("STRIPE_WEBHOOK_SECRET").map(|v| !v.is_empty()).unwrap_or(false),
+            std::env::var("STRIPE_WEBHOOK_SECRET")
+                .map(|v| !v.is_empty())
+                .unwrap_or(false),
             "STRIPE_WEBHOOK_SECRET must be set in production (empty value disables HMAC verification)"
         );
         assert!(
-            std::env::var("ALLOWED_ORIGINS").map(|v| !v.is_empty()).unwrap_or(false),
+            std::env::var("ALLOWED_ORIGINS")
+                .map(|v| !v.is_empty())
+                .unwrap_or(false),
             "ALLOWED_ORIGINS must be set in production (e.g. https://apps.reflective.se)"
         );
     }
@@ -71,18 +75,14 @@ async fn main() -> Result<()> {
     let accounts_protected: Router<()> = runway_accounts::protected_routes(accounts);
 
     // Merge all protected routes then apply the auth layer once.
-    let protected = api_protected
-        .merge(accounts_protected)
-        .layer(auth_layer);
+    let protected = api_protected.merge(accounts_protected).layer(auth_layer);
 
     // ROUTE_PREFIX=/api-server mounts all routes under that path.
     // Firebase Hosting rewrites pass the full path through, so this lets
     // apps.reflective.se/api-server/** route to this service.
     // /health always stays at root for Cloud Run health checks.
     let routed = match std::env::var("ROUTE_PREFIX") {
-        Ok(prefix) if !prefix.is_empty() => {
-            Router::new().nest(&prefix, public.merge(protected))
-        }
+        Ok(prefix) if !prefix.is_empty() => Router::new().nest(&prefix, public.merge(protected)),
         _ => public.merge(protected),
     };
 

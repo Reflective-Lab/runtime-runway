@@ -25,9 +25,21 @@ impl ClaimsService {
         });
     }
 
-    async fn mint(&self, uid: &str, org_id: &str, apps: &[String], role: &str) -> anyhow::Result<()> {
+    async fn mint(
+        &self,
+        uid: &str,
+        org_id: &str,
+        apps: &[String],
+        role: &str,
+    ) -> anyhow::Result<()> {
         if self.local_dev {
-            tracing::debug!(uid, org_id, ?apps, role, "LOCAL_DEV: skipping custom claims update");
+            tracing::debug!(
+                uid,
+                org_id,
+                ?apps,
+                role,
+                "LOCAL_DEV: skipping custom claims update"
+            );
             return Ok(());
         }
 

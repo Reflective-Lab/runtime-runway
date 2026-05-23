@@ -32,6 +32,12 @@ We use strongly typed languages that compile to native code. Rust for the system
 |---|---|
 | `converge-application` | The `converge` CLI/TUI binary |
 | `converge-llm` | Local LLM inference (Burn, llama.cpp) |
+| `runway-auth` | Firebase Auth middleware and auth context |
+| `runway-middleware` | Axum request-id, trace, CORS, compression, errors, health, and shutdown |
+| `runway-secrets` | GCP Secret Manager client and typed secret handling |
+| `runway-storage` | Local/remote document, vector, object, event-log, and embedding storage kit |
+| `runway-telemetry` | OpenTelemetry, Cloud Trace, Sentry, and structured logging bootstrap |
+| `api-server` | Reference Cloud Run server wiring the Runway crates |
 
 Both are proprietary and unpublished. They depend on a pinned Converge release tag by default, with an optional local Cargo patch to `../reflective/stack/bedrock-platform/converge` for SDK work.
 
@@ -71,13 +77,16 @@ These are not suggestions.
 
 ## Architecture
 
-Runway has two crates and two infrastructure layers:
+Runway has distribution crates, reusable runtime infrastructure crates, and
+deployment layers:
 
 ```
-crates/application  →  converge/{core, experience, provider, ...}   CLI/TUI
-crates/llm          →  converge/{core, domain, provider, storage}   Local inference
-docker/             Container definitions
-ops/                Deployment scripts, GPU infra
+crates/application       CLI/TUI distribution
+crates/llm               local and remote GPU inference
+crates/runway-*          auth, middleware, secrets, storage, telemetry
+crates/api-server        Cloud Run reference server
+docker/                  container definitions
+ops/                     deployment scripts, GCP infra, GPU paths
 ```
 
 The Converge SDK lives at `~/dev/reflective/stack/bedrock-platform/converge/` for local SDK work and runtime packaging.

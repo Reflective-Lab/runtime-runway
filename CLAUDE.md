@@ -9,6 +9,12 @@ Distribution, deployment, and infrastructure for the Converge stack.
 
 - `crates/application` — the `converge` binary (CLI/TUI distribution)
 - `crates/llm` — local LLM inference (Burn, llama.cpp)
+- `crates/runway-auth` — Firebase Auth middleware
+- `crates/runway-middleware` — Axum service middleware
+- `crates/runway-secrets` — Secret Manager integration
+- `crates/runway-storage` — local/remote storage kit
+- `crates/runway-telemetry` — tracing, logging, and error reporting
+- `crates/api-server` — reference Cloud Run API server
 - `docker/` — Docker compose, Dockerfiles
 - `ops/` — deployment scripts, GPU deploy (RunPod, Cloud Run, Modal)
 

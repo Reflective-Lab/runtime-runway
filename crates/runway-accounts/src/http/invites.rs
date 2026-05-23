@@ -47,7 +47,11 @@ pub async fn create_invite(
     Path(org_id): Path<String>,
     Json(req): Json<CreateInviteRequest>,
 ) -> Result<Json<InviteResponse>, AccountError> {
-    let org = state.store.get_org(&org_id).await?.ok_or(AccountError::NotFound)?;
+    let org = state
+        .store
+        .get_org(&org_id)
+        .await?
+        .ok_or(AccountError::NotFound)?;
 
     if org.billing_owner_uid != ctx.uid() && !ctx.is_admin() {
         return Err(AccountError::Forbidden);
@@ -72,7 +76,11 @@ pub async fn list_invites(
     Extension(ctx): Extension<AuthContext>,
     Path(org_id): Path<String>,
 ) -> Result<Json<Vec<InviteResponse>>, AccountError> {
-    let org = state.store.get_org(&org_id).await?.ok_or(AccountError::NotFound)?;
+    let org = state
+        .store
+        .get_org(&org_id)
+        .await?
+        .ok_or(AccountError::NotFound)?;
 
     if org.billing_owner_uid != ctx.uid() && !ctx.is_admin() {
         return Err(AccountError::Forbidden);
@@ -102,7 +110,9 @@ pub async fn accept_invite(
         .ok_or(AccountError::NotFound)?;
 
     if !invite.is_valid() {
-        return Err(AccountError::Internal("invite expired or already used".into()));
+        return Err(AccountError::Internal(
+            "invite expired or already used".into(),
+        ));
     }
 
     // Idempotent: if the user is already a member, return success.

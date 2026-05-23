@@ -6,6 +6,8 @@ source: llm
 Runway hosts two categories of crates: Converge distribution crates (application and LLM) and the shared infrastructure crates (`runway-*`). The runway-* crates have no Converge dependency — they are standalone infra primitives reused by all Reflective apps.
 
 `api-server` is the reference binary that wires all five runway-* crates together and proves the Cloud Run deployment path.
+`runway-app-host` is the reusable execution-container packet and host bootstrap
+used by marquee apps before they grow local server code.
 
 ## Crates
 

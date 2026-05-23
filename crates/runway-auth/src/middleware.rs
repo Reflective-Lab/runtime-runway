@@ -129,11 +129,17 @@ where
 
             // In LOCAL_DEV mode, accept "dev" as a bypass token and inject a canned context.
             let claims = if std::env::var("LOCAL_DEV").as_deref() == Ok("true") && token == "dev" {
+                let mut apps = vec!["api-server".into()];
+                if let Some(app) = &required_app
+                    && !apps.iter().any(|registered| registered == app)
+                {
+                    apps.push(app.clone());
+                }
                 FirebaseClaims {
                     uid: "dev-uid".into(),
                     email: Some("dev@local".into()),
                     org_id: Some("dev-org".into()),
-                    apps: vec!["api-server".into()],
+                    apps,
                     role: Some("admin".into()),
                 }
             } else {

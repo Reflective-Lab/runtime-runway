@@ -7,7 +7,8 @@ use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
 use serde::Deserialize;
 use tokio::sync::RwLock;
 
-const JWKS_URL: &str = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
+const JWKS_URL: &str =
+    "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
 const JWKS_TTL: Duration = Duration::from_secs(3600);
 
 /// Custom claims expected in Firebase ID tokens issued by the backend after org creation.
@@ -76,7 +77,9 @@ impl FirebaseAuth {
     /// JWKS is cached for 1 hour; re-fetched when a new `kid` is seen.
     pub async fn verify(&self, id_token: &str) -> anyhow::Result<FirebaseClaims> {
         let header = decode_header(id_token)?;
-        let kid = header.kid.ok_or_else(|| anyhow::anyhow!("JWT missing kid"))?;
+        let kid = header
+            .kid
+            .ok_or_else(|| anyhow::anyhow!("JWT missing kid"))?;
 
         let key = self.decoding_key(&kid).await?;
 
@@ -102,12 +105,11 @@ impl FirebaseAuth {
         // Fast path: cache hit under read lock.
         {
             let guard = self.cache.read().await;
-            if let Some(c) = guard.as_ref() {
-                if c.fetched_at.elapsed() < JWKS_TTL {
-                    if let Some(jwk) = c.keys.iter().find(|k| k.kid == kid) {
-                        return Ok(DecodingKey::from_rsa_components(&jwk.n, &jwk.e)?);
-                    }
-                }
+            if let Some(c) = guard.as_ref()
+                && c.fetched_at.elapsed() < JWKS_TTL
+                && let Some(jwk) = c.keys.iter().find(|k| k.kid == kid)
+            {
+                return Ok(DecodingKey::from_rsa_components(&jwk.n, &jwk.e)?);
             }
         }
 

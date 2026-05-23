@@ -1,9 +1,9 @@
 pub mod claims;
 pub mod domain;
 pub mod error;
+mod http;
 pub mod store;
 pub mod stripe;
-mod http;
 
 pub use claims::ClaimsService;
 pub use domain::{Account, Org, OrgInvite, OrgMember, Plan, Role};
@@ -50,7 +50,10 @@ pub fn protected_routes(state: AccountsState) -> Router {
     Router::new()
         .route("/v1/accounts/me", routing::get(http::accounts::get_me))
         .route("/v1/orgs/:org_id", routing::get(http::orgs::get_org))
-        .route("/v1/orgs/:org_id/members", routing::get(http::members::list_members))
+        .route(
+            "/v1/orgs/:org_id/members",
+            routing::get(http::members::list_members),
+        )
         .route(
             "/v1/orgs/:org_id/members/:uid",
             routing::delete(http::members::remove_member),
@@ -63,8 +66,17 @@ pub fn protected_routes(state: AccountsState) -> Router {
             "/v1/invites/:token/accept",
             routing::post(http::invites::accept_invite),
         )
-        .route("/v1/billing/summary", routing::get(http::billing::billing_summary))
-        .route("/v1/billing/checkout", routing::post(http::billing::create_checkout))
-        .route("/v1/billing/portal", routing::post(http::billing::create_portal))
+        .route(
+            "/v1/billing/summary",
+            routing::get(http::billing::billing_summary),
+        )
+        .route(
+            "/v1/billing/checkout",
+            routing::post(http::billing::create_checkout),
+        )
+        .route(
+            "/v1/billing/portal",
+            routing::post(http::billing::create_portal),
+        )
         .with_state(state)
 }

@@ -2,7 +2,11 @@ use axum::{Extension, Json, extract::State};
 use runway_auth::AuthContext;
 use serde::Serialize;
 
-use crate::{AccountsState, domain::{Account, Org, OrgMember, Role}, error::AccountError};
+use crate::{
+    AccountsState,
+    domain::{Account, Org, OrgMember, Role},
+    error::AccountError,
+};
 
 #[derive(Serialize)]
 pub struct MeResponse {
@@ -32,7 +36,11 @@ pub async fn get_me(
 }
 
 /// Create account + personal org for a user logging in for the first time.
-async fn provision(uid: &str, email: Option<&str>, state: &AccountsState) -> Result<Account, AccountError> {
+async fn provision(
+    uid: &str,
+    email: Option<&str>,
+    state: &AccountsState,
+) -> Result<Account, AccountError> {
     let org = Org::new_personal(uid);
     state.store.upsert_org(&org).await?;
 

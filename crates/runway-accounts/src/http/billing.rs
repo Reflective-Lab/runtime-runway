@@ -147,7 +147,9 @@ pub async fn create_portal(
             .and_then(|o| o.stripe_customer_id),
         None => None,
     }
-    .ok_or_else(|| AccountError::Stripe("no billing account found — complete a checkout first".into()))?;
+    .ok_or_else(|| {
+        AccountError::Stripe("no billing account found — complete a checkout first".into())
+    })?;
 
     let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "https://apps.reflective.se".into());
     let return_url = req
@@ -234,7 +236,12 @@ async fn handle_checkout_completed(state: &AccountsState, event: &Value) {
     };
 
     // The subscription will arrive in a follow-up subscription.created event — no plan update here.
-    tracing::info!(uid, org_id = org.org_id, customer_id, "checkout completed, org linked");
+    tracing::info!(
+        uid,
+        org_id = org.org_id,
+        customer_id,
+        "checkout completed, org linked"
+    );
 }
 
 async fn handle_subscription_updated(state: &AccountsState, subscription: &Value) {
@@ -272,7 +279,10 @@ async fn handle_subscription_updated(state: &AccountsState, subscription: &Value
     org.touch();
 
     if let Err(e) = state.store.upsert_org(&org).await {
-        tracing::error!(org_id = org.org_id, "subscription update: failed to save org: {e}");
+        tracing::error!(
+            org_id = org.org_id,
+            "subscription update: failed to save org: {e}"
+        );
         return;
     }
 
@@ -307,7 +317,10 @@ async fn handle_subscription_deleted(state: &AccountsState, subscription: &Value
     org.touch();
 
     if let Err(e) = state.store.upsert_org(&org).await {
-        tracing::error!(org_id = org.org_id, "subscription delete: failed to save org: {e}");
+        tracing::error!(
+            org_id = org.org_id,
+            "subscription delete: failed to save org: {e}"
+        );
         return;
     }
 
@@ -333,7 +346,10 @@ async fn handle_payment_failed(state: &AccountsState, invoice: &Value) {
     org.touch();
 
     if let Err(e) = state.store.upsert_org(&org).await {
-        tracing::error!(org_id = org.org_id, "payment_failed: failed to save org: {e}");
+        tracing::error!(
+            org_id = org.org_id,
+            "payment_failed: failed to save org: {e}"
+        );
     } else {
         tracing::info!(org_id = org.org_id, "org marked past_due");
     }

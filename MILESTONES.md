@@ -4,6 +4,23 @@ Strategic milestones for getting Reflective apps online. Each milestone is a shi
 
 ---
 
+## Immediate priority — Canonical app execution container
+
+Stop the drift toward app-owned backend servers. Runway should provide the
+standard execution container, Helm should mount operator-control/job modules
+into it, and marquee apps should instantiate it with typed app packets.
+
+- [x] Document the Runway/Helm/app execution-container boundary
+- [x] Define the first `AppExecutionPacket` shape using Catalyst
+- [ ] Split Helm `application-server` responsibilities into Runway host concerns
+      and Helm module concerns
+- [x] Extract reusable Runway host construction into `crates/runway-app-host`
+- [ ] Mount Helm operator-control and governed-job routes into the Runway host
+- [ ] Prove Catalyst through the Runway container before adding new app-local
+      backend patterns
+
+---
+
 ## M1 — Shared infrastructure compiles ✅ DONE 2026-05-11
 
 All five `runway-*` crates build and pass `just lint`:

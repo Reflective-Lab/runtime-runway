@@ -1,0 +1,19 @@
+[package]
+name = "runway-app-host"
+description = "Runway app execution container packet and host bootstrap"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+runway-auth = { workspace = true }
+runway-middleware = { workspace = true }
+runway-storage = { workspace = true }
+runway-telemetry = { workspace = true }
+
+anyhow = { workspace = true }
+axum = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }

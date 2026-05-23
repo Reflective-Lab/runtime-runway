@@ -54,8 +54,10 @@ impl StripeClient {
             )));
         }
 
-        let list: StripeList<StripeCustomer> =
-            resp.json().await.map_err(|e| AccountError::Stripe(e.to_string()))?;
+        let list: StripeList<StripeCustomer> = resp
+            .json()
+            .await
+            .map_err(|e| AccountError::Stripe(e.to_string()))?;
         Ok(list.data.into_iter().next().map(|c| c.id))
     }
 
@@ -89,8 +91,10 @@ impl StripeClient {
             )));
         }
 
-        let customer: StripeCustomer =
-            resp.json().await.map_err(|e| AccountError::Stripe(e.to_string()))?;
+        let customer: StripeCustomer = resp
+            .json()
+            .await
+            .map_err(|e| AccountError::Stripe(e.to_string()))?;
         Ok(customer.id)
     }
 
@@ -134,8 +138,10 @@ impl StripeClient {
             )));
         }
 
-        let session: StripeCheckoutSession =
-            resp.json().await.map_err(|e| AccountError::Stripe(e.to_string()))?;
+        let session: StripeCheckoutSession = resp
+            .json()
+            .await
+            .map_err(|e| AccountError::Stripe(e.to_string()))?;
         session
             .url
             .ok_or_else(|| AccountError::Stripe("no URL in checkout session response".into()))
@@ -165,8 +171,10 @@ impl StripeClient {
             )));
         }
 
-        let session: StripePortalSession =
-            resp.json().await.map_err(|e| AccountError::Stripe(e.to_string()))?;
+        let session: StripePortalSession = resp
+            .json()
+            .await
+            .map_err(|e| AccountError::Stripe(e.to_string()))?;
         Ok(session.url)
     }
 
@@ -195,8 +203,10 @@ impl StripeClient {
             return Ok(None);
         }
 
-        let list: StripeList<StripeSubscription> =
-            resp.json().await.map_err(|e| AccountError::Stripe(e.to_string()))?;
+        let list: StripeList<StripeSubscription> = resp
+            .json()
+            .await
+            .map_err(|e| AccountError::Stripe(e.to_string()))?;
 
         // Also try trialing if no active found
         if list.data.is_empty() {
@@ -204,13 +214,19 @@ impl StripeClient {
                 .client
                 .get(format!("{STRIPE_API_BASE}/subscriptions"))
                 .bearer_auth(key)
-                .query(&[("customer", customer_id), ("limit", "1"), ("status", "trialing")])
+                .query(&[
+                    ("customer", customer_id),
+                    ("limit", "1"),
+                    ("status", "trialing"),
+                ])
                 .send()
                 .await
                 .map_err(|e| AccountError::Stripe(e.to_string()))?;
             if resp2.status().is_success() {
-                let list2: StripeList<StripeSubscription> =
-                    resp2.json().await.map_err(|e| AccountError::Stripe(e.to_string()))?;
+                let list2: StripeList<StripeSubscription> = resp2
+                    .json()
+                    .await
+                    .map_err(|e| AccountError::Stripe(e.to_string()))?;
                 return Ok(list2.data.into_iter().next());
             }
         }
@@ -292,7 +308,11 @@ pub struct StripeSubscription {
 
 impl StripeSubscription {
     pub fn price_ids(&self) -> Vec<&str> {
-        self.items.data.iter().map(|item| item.price.id.as_str()).collect()
+        self.items
+            .data
+            .iter()
+            .map(|item| item.price.id.as_str())
+            .collect()
     }
 
     pub fn is_active(&self) -> bool {

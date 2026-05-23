@@ -33,7 +33,11 @@ pub async fn list_members(
     Extension(ctx): Extension<AuthContext>,
     Path(org_id): Path<String>,
 ) -> Result<Json<Vec<MemberResponse>>, AccountError> {
-    let org = state.store.get_org(&org_id).await?.ok_or(AccountError::NotFound)?;
+    let org = state
+        .store
+        .get_org(&org_id)
+        .await?
+        .ok_or(AccountError::NotFound)?;
 
     if org.billing_owner_uid != ctx.uid() && !ctx.is_admin() {
         return Err(AccountError::Forbidden);
@@ -56,14 +60,20 @@ pub async fn remove_member(
     Extension(ctx): Extension<AuthContext>,
     Path((org_id, target_uid)): Path<(String, String)>,
 ) -> Result<StatusCode, AccountError> {
-    let org = state.store.get_org(&org_id).await?.ok_or(AccountError::NotFound)?;
+    let org = state
+        .store
+        .get_org(&org_id)
+        .await?
+        .ok_or(AccountError::NotFound)?;
 
     if org.billing_owner_uid != ctx.uid() && !ctx.is_admin() {
         return Err(AccountError::Forbidden);
     }
 
     if target_uid == org.billing_owner_uid {
-        return Err(AccountError::Internal("cannot remove the billing owner".into()));
+        return Err(AccountError::Internal(
+            "cannot remove the billing owner".into(),
+        ));
     }
 
     state.store.remove_member(&org_id, &target_uid).await?;
