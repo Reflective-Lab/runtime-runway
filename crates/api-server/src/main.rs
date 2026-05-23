@@ -17,6 +17,9 @@ use serde_json::{Value, json};
 use tracing::info;
 use uuid::Uuid;
 
+mod config;
+use config::RunwayConfig;
+
 #[derive(Clone)]
 struct AppState {
     storage: Arc<StorageKit>,
@@ -26,39 +29,22 @@ struct AppState {
 async fn main() -> Result<()> {
     let _telemetry = init_telemetry(TelemetryConfig::from_env("api-server"))?;
 
-    let local_dev = std::env::var("LOCAL_DEV").as_deref() == Ok("true");
+    let cfg = RunwayConfig::from_env()?;
 
-    let storage = if local_dev {
-        let base = std::env::var("STORAGE_PATH").unwrap_or_else(|_| "/tmp/api-server".into());
-        StorageKit::local(base).await?
+    let storage = if cfg.local_dev {
+        StorageKit::local(&cfg.storage_path).await?
     } else {
         RemoteStorageKit::build(RemoteConfig::from_env()?).await?
     };
 
     let storage = Arc::new(storage);
 
-    if !local_dev {
-        assert!(
-            std::env::var("STRIPE_WEBHOOK_SECRET")
-                .map(|v| !v.is_empty())
-                .unwrap_or(false),
-            "STRIPE_WEBHOOK_SECRET must be set in production (empty value disables HMAC verification)"
-        );
-        assert!(
-            std::env::var("ALLOWED_ORIGINS")
-                .map(|v| !v.is_empty())
-                .unwrap_or(false),
-            "ALLOWED_ORIGINS must be set in production (e.g. https://apps.reflective.se)"
-        );
-    }
-
-    let project_id = std::env::var("FIREBASE_PROJECT_ID").unwrap_or_else(|_| "dev-project".into());
-    let auth = FirebaseAuth::new(project_id);
-    let auth_layer = AuthLayer::new(auth, local_dev);
+    let auth = FirebaseAuth::new(cfg.firebase_project_id.clone());
+    let auth_layer = AuthLayer::new(auth, cfg.local_dev);
 
     let accounts_config = AccountsConfig {
-        local_dev,
-        app_url: std::env::var("APP_URL").unwrap_or_else(|_| "https://apps.reflective.se".into()),
+        local_dev: cfg.local_dev,
+        app_url: cfg.app_url.clone(),
     };
     let accounts = AccountsState::new(Arc::clone(&storage), accounts_config);
 
@@ -81,13 +67,9 @@ async fn main() -> Result<()> {
     // Merge all protected routes then apply the auth layer once.
     let protected = api_protected.merge(accounts_protected).layer(auth_layer);
 
-    // ROUTE_PREFIX=/api-server mounts all routes under that path.
-    // Firebase Hosting rewrites pass the full path through, so this lets
-    // apps.reflective.se/api-server/** route to this service.
-    // /health always stays at root for Cloud Run health checks.
-    let routed = match std::env::var("ROUTE_PREFIX") {
-        Ok(prefix) if !prefix.is_empty() => Router::new().nest(&prefix, public.merge(protected)),
-        _ => public.merge(protected),
+    let routed = match cfg.route_prefix.as_deref() {
+        Some(prefix) => Router::new().nest(prefix, public.merge(protected)),
+        None => public.merge(protected),
     };
 
     let app = stack(routed);
