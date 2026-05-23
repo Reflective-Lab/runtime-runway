@@ -54,7 +54,7 @@ async fn main() -> Result<()> {
 
     let project_id = std::env::var("FIREBASE_PROJECT_ID").unwrap_or_else(|_| "dev-project".into());
     let auth = FirebaseAuth::new(project_id);
-    let auth_layer = AuthLayer::new(auth);
+    let auth_layer = AuthLayer::new(auth, local_dev);
 
     let accounts = AccountsState::new(Arc::clone(&storage));
 

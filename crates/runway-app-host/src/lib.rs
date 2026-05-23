@@ -348,7 +348,7 @@ impl RunwayAppHost {
     }
 
     pub fn router(&self, public_routes: Router, protected_routes: Router) -> Router {
-        let auth_layer = AuthLayer::new(FirebaseAuth::new(firebase_project_id()))
+        let auth_layer = AuthLayer::new(FirebaseAuth::new(firebase_project_id()), local_dev_flag())
             .requiring_app(self.packet.required_auth_app());
         let protected = protected_routes.layer(auth_layer);
         let public = self.status_routes().merge(public_routes);
@@ -376,6 +376,11 @@ impl RunwayAppHost {
             }),
         )
     }
+}
+
+// Temporary helper — folded into HostConfig in the runtime-config-consolidation refactor.
+fn local_dev_flag() -> bool {
+    std::env::var("LOCAL_DEV").as_deref() == Ok("true")
 }
 
 fn firebase_project_id() -> String {

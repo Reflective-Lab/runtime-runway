@@ -65,13 +65,17 @@ pub struct AuthLayer {
     auth: Arc<FirebaseAuth>,
     /// If set, only allow requests where the org has access to this app.
     required_app: Option<String>,
+    /// When true, accept the bypass token `"dev"` and inject a canned context.
+    /// Read once at construction; never re-read from env per request.
+    local_dev: bool,
 }
 
 impl AuthLayer {
-    pub fn new(auth: FirebaseAuth) -> Self {
+    pub fn new(auth: FirebaseAuth, local_dev: bool) -> Self {
         Self {
             auth: Arc::new(auth),
             required_app: None,
+            local_dev,
         }
     }
 
@@ -89,6 +93,7 @@ impl<S> Layer<S> for AuthLayer {
             inner,
             auth: self.auth.clone(),
             required_app: self.required_app.clone(),
+            local_dev: self.local_dev,
         }
     }
 }
@@ -98,6 +103,7 @@ pub struct AuthMiddleware<S> {
     inner: S,
     auth: Arc<FirebaseAuth>,
     required_app: Option<String>,
+    local_dev: bool,
 }
 
 type BoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
@@ -118,6 +124,7 @@ where
     fn call(&mut self, mut req: Request) -> Self::Future {
         let auth = self.auth.clone();
         let required_app = self.required_app.clone();
+        let local_dev = self.local_dev;
         let mut inner = self.inner.clone();
 
         Box::pin(async move {
@@ -127,8 +134,8 @@ where
                 Err(e) => return Ok(e.into_response()),
             };
 
-            // In LOCAL_DEV mode, accept "dev" as a bypass token and inject a canned context.
-            let claims = if std::env::var("LOCAL_DEV").as_deref() == Ok("true") && token == "dev" {
+            // In local_dev mode, accept "dev" as a bypass token and inject a canned context.
+            let claims = if local_dev && token == "dev" {
                 let mut apps = vec!["api-server".into()];
                 if let Some(app) = &required_app
                     && !apps.iter().any(|registered| registered == app)
@@ -177,4 +184,27 @@ fn extract_bearer(headers: &axum::http::HeaderMap) -> Result<String, AuthError> 
         return Err(AuthError::MalformedHeader);
     }
     Ok(token)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::firebase::FirebaseAuth;
+
+    #[test]
+    fn auth_layer_stores_local_dev_flag() {
+        let auth = FirebaseAuth::new("dev-project".to_string());
+        let layer = AuthLayer::new(auth, true);
+        assert!(
+            layer.local_dev,
+            "expected local_dev=true to be stored on AuthLayer"
+        );
+    }
+
+    #[test]
+    fn auth_layer_defaults_to_strict_in_prod() {
+        let auth = FirebaseAuth::new("dev-project".to_string());
+        let layer = AuthLayer::new(auth, false);
+        assert!(!layer.local_dev);
+    }
 }
