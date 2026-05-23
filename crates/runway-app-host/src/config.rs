@@ -9,6 +9,10 @@ pub struct HostConfig {
     pub storage_path: String,
     pub firebase_project_id: String,
     pub route_prefix: Option<String>,
+    /// Comma-separated CORS allow-list. Empty = allow any origin (the
+    /// local-development default). App-host deployments that need
+    /// stricter CORS set `ALLOWED_ORIGINS` in their environment.
+    pub allowed_origins: String,
 }
 
 impl HostConfig {
@@ -37,11 +41,14 @@ impl HostConfig {
             }
         };
 
+        let allowed_origins = std::env::var("ALLOWED_ORIGINS").unwrap_or_default();
+
         Self {
             local_dev,
             storage_path,
             firebase_project_id,
             route_prefix,
+            allowed_origins,
         }
     }
 }

@@ -13,11 +13,16 @@ pub struct RunwayConfig {
     pub firebase_project_id: String,
     pub route_prefix: Option<String>,
     pub app_url: String,
+    /// Comma-separated CORS allow-list. Required in production; empty in
+    /// local_dev means "allow any origin".
+    pub allowed_origins: String,
 }
 
 impl RunwayConfig {
     pub fn from_env() -> Result<Self> {
         let local_dev = std::env::var("LOCAL_DEV").as_deref() == Ok("true");
+
+        let allowed_origins = std::env::var("ALLOWED_ORIGINS").unwrap_or_default();
 
         if !local_dev {
             let stripe_secret = std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default();
@@ -25,7 +30,6 @@ impl RunwayConfig {
                 !stripe_secret.is_empty(),
                 "STRIPE_WEBHOOK_SECRET must be set in production (empty value disables HMAC verification)"
             );
-            let allowed_origins = std::env::var("ALLOWED_ORIGINS").unwrap_or_default();
             anyhow::ensure!(
                 !allowed_origins.is_empty(),
                 "ALLOWED_ORIGINS must be set in production (e.g. https://apps.reflective.se)"
@@ -67,6 +71,7 @@ impl RunwayConfig {
             firebase_project_id,
             route_prefix,
             app_url,
+            allowed_origins,
         })
     }
 }

@@ -5,7 +5,7 @@ use axum::{Extension, Json, Router, extract::State, http::StatusCode, routing::g
 use chrono::Utc;
 use runway_accounts::{AccountsConfig, AccountsState};
 use runway_auth::{AuthContext, AuthLayer, FirebaseAuth};
-use runway_middleware::{serve, stack};
+use runway_middleware::{MiddlewareConfig, serve, stack};
 use runway_storage::{
     StorageKit, StoredEvent,
     remote::{RemoteConfig, RemoteStorageKit},
@@ -72,7 +72,10 @@ async fn main() -> Result<()> {
         None => public.merge(protected),
     };
 
-    let app = stack(routed);
+    let mw_config = MiddlewareConfig {
+        allowed_origins: cfg.allowed_origins.clone(),
+    };
+    let app = stack(routed, &mw_config);
 
     info!("api-server starting");
     serve(app).await;

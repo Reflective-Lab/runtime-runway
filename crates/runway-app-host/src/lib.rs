@@ -7,7 +7,7 @@ use anyhow::Result;
 use axum::routing::get;
 use axum::{Json, Router};
 use runway_auth::{AuthLayer, FirebaseAuth};
-use runway_middleware::{serve, stack};
+use runway_middleware::{MiddlewareConfig, serve, stack};
 use runway_storage::{StorageKit, remote::RemoteConfig};
 use runway_telemetry::{TelemetryConfig, TelemetryGuard, init as init_telemetry};
 use serde::{Deserialize, Serialize};
@@ -367,7 +367,10 @@ impl RunwayAppHost {
             None => public.merge(protected),
         };
 
-        stack(routed)
+        let mw_config = MiddlewareConfig {
+            allowed_origins: self.config.allowed_origins.clone(),
+        };
+        stack(routed, &mw_config)
     }
 
     pub async fn serve(self, public_routes: Router, protected_routes: Router) -> Result<()> {

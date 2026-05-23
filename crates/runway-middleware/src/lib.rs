@@ -16,10 +16,22 @@ use tower_http::{
 use tracing::Span;
 use uuid::Uuid;
 
+/// Runtime configuration for the middleware stack.
+///
+/// Populated by the binary at startup and passed into `stack`. The
+/// middleware crate itself never reads from the process environment.
+#[derive(Debug, Clone, Default)]
+pub struct MiddlewareConfig {
+    /// Comma-separated list of allowed CORS origins. Empty = allow any
+    /// (the local-development default; production binaries must populate
+    /// this from `ALLOWED_ORIGINS`).
+    pub allowed_origins: String,
+}
+
 /// Attach the full middleware stack to any Axum router.
 ///
 /// Order matters: request-id is outermost, compression is innermost.
-pub fn stack<S>(router: Router<S>) -> Router<S>
+pub fn stack<S>(router: Router<S>, cfg: &MiddlewareConfig) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
@@ -57,8 +69,7 @@ where
                 CorsLayer::new()
                     .allow_methods(Any)
                     .allow_headers(Any)
-                    // Restrict origins in prod via env var ALLOWED_ORIGINS
-                    .allow_origin(cors_origin()),
+                    .allow_origin(cors_origin(&cfg.allowed_origins)),
             )
             .layer(middleware::from_fn(error_formatter)),
     )
@@ -105,18 +116,15 @@ async fn error_formatter(req: Request, next: Next) -> Response {
     resp
 }
 
-fn cors_origin() -> tower_http::cors::AllowOrigin {
-    // In prod, set ALLOWED_ORIGINS="https://app.folio.se,https://app.quorum.se"
-    match std::env::var("ALLOWED_ORIGINS") {
-        Ok(origins) => {
-            let parsed: Vec<_> = origins
-                .split(',')
-                .filter_map(|o| o.trim().parse::<axum::http::HeaderValue>().ok())
-                .collect();
-            tower_http::cors::AllowOrigin::list(parsed)
-        }
-        Err(_) => tower_http::cors::AllowOrigin::any(),
+fn cors_origin(allowed_origins: &str) -> tower_http::cors::AllowOrigin {
+    if allowed_origins.is_empty() {
+        return tower_http::cors::AllowOrigin::any();
     }
+    let parsed: Vec<_> = allowed_origins
+        .split(',')
+        .filter_map(|o| o.trim().parse::<axum::http::HeaderValue>().ok())
+        .collect();
+    tower_http::cors::AllowOrigin::list(parsed)
 }
 
 async fn shutdown_signal() {
