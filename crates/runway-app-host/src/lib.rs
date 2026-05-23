@@ -1,3 +1,6 @@
+mod config;
+pub use config::HostConfig;
+
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -302,32 +305,36 @@ pub struct AppHostState {
 pub struct RunwayAppHost {
     packet: Arc<AppExecutionPacket>,
     storage: Arc<StorageKit>,
+    config: HostConfig,
     _telemetry: TelemetryGuard,
 }
 
 impl RunwayAppHost {
     pub async fn from_env(packet: AppExecutionPacket) -> Result<Self> {
+        let config = HostConfig::from_env(&packet);
+        Self::with_config(packet, config).await
+    }
+
+    pub async fn with_config(packet: AppExecutionPacket, config: HostConfig) -> Result<Self> {
         let _telemetry = init_telemetry(TelemetryConfig::from_env(&packet.app_id))?;
 
-        let local_dev = std::env::var("LOCAL_DEV").as_deref() == Ok("true");
-        let storage = if local_dev {
-            let base =
-                std::env::var("STORAGE_PATH").unwrap_or_else(|_| format!("/tmp/{}", packet.app_id));
-            StorageKit::local(base).await?
+        let storage = if config.local_dev {
+            StorageKit::local(&config.storage_path).await?
         } else {
             StorageKit::remote(RemoteConfig::from_env()?).await?
         };
 
         tracing::info!(
             app_id = %packet.app_id,
-            route_prefix = %packet.route_prefix,
-            local_dev,
+            route_prefix = ?config.route_prefix,
+            local_dev = config.local_dev,
             "runway app host initialized"
         );
 
         Ok(Self {
             packet: Arc::new(packet),
             storage: Arc::new(storage),
+            config,
             _telemetry,
         })
     }
@@ -348,12 +355,15 @@ impl RunwayAppHost {
     }
 
     pub fn router(&self, public_routes: Router, protected_routes: Router) -> Router {
-        let auth_layer = AuthLayer::new(FirebaseAuth::new(firebase_project_id()), local_dev_flag())
-            .requiring_app(self.packet.required_auth_app());
+        let auth_layer = AuthLayer::new(
+            FirebaseAuth::new(self.config.firebase_project_id.clone()),
+            self.config.local_dev,
+        )
+        .requiring_app(self.packet.required_auth_app());
         let protected = protected_routes.layer(auth_layer);
         let public = self.status_routes().merge(public_routes);
-        let routed = match route_prefix(&self.packet) {
-            Some(prefix) => Router::new().nest(&prefix, public.merge(protected)),
+        let routed = match self.config.route_prefix.as_deref() {
+            Some(prefix) => Router::new().nest(prefix, public.merge(protected)),
             None => public.merge(protected),
         };
 
@@ -375,30 +385,6 @@ impl RunwayAppHost {
                 async move { Json(status_payload(&packet)) }
             }),
         )
-    }
-}
-
-// Temporary helper — folded into HostConfig in the runtime-config-consolidation refactor.
-fn local_dev_flag() -> bool {
-    std::env::var("LOCAL_DEV").as_deref() == Ok("true")
-}
-
-fn firebase_project_id() -> String {
-    std::env::var("FIREBASE_PROJECT_ID")
-        .or_else(|_| std::env::var("GOOGLE_CLOUD_PROJECT"))
-        .or_else(|_| std::env::var("GCP_PROJECT_ID"))
-        .unwrap_or_else(|_| "dev-project".to_string())
-}
-
-fn route_prefix(packet: &AppExecutionPacket) -> Option<String> {
-    let prefix = std::env::var("ROUTE_PREFIX").unwrap_or_else(|_| packet.route_prefix.clone());
-    let trimmed = prefix.trim();
-    if trimmed.is_empty() || trimmed == "/" {
-        None
-    } else if trimmed.starts_with('/') {
-        Some(trimmed.to_string())
-    } else {
-        Some(format!("/{trimmed}"))
     }
 }
 
