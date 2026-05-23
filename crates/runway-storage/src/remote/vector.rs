@@ -55,8 +55,9 @@ impl VectorStore for VertexVectorStore {
         _metadata: HashMap<String, Value>,
     ) -> Result<()> {
         let url = format!(
-            "https://{}-aiplatform.googleapis.com/v1/projects/{}/locations/{}/indexes/{}/upsertDatapoints",
-            self.region, self.project_id, self.region, self.endpoint_id
+            "{}/indexes/{}/upsertDatapoints",
+            crate::endpoints::vertex_aiplatform(&self.region, &self.project_id),
+            self.endpoint_id
         );
         let body = serde_json::json!({
             "datapoints": [{
@@ -78,8 +79,9 @@ impl VectorStore for VertexVectorStore {
 
     async fn search(&self, _namespace: &str, query: &[f32], top_k: usize) -> Result<Vec<Match>> {
         let url = format!(
-            "https://{}-aiplatform.googleapis.com/v1/projects/{}/locations/{}/indexEndpoints/{}:findNeighbors",
-            self.region, self.project_id, self.region, self.endpoint_id
+            "{}/indexEndpoints/{}:findNeighbors",
+            crate::endpoints::vertex_aiplatform(&self.region, &self.project_id),
+            self.endpoint_id
         );
         let body = serde_json::json!({
             "deployedIndexId": self.deployed_index_id,
@@ -123,8 +125,9 @@ impl VectorStore for VertexVectorStore {
 
     async fn delete(&self, _namespace: &str, id: &str) -> Result<()> {
         let url = format!(
-            "https://{}-aiplatform.googleapis.com/v1/projects/{}/locations/{}/indexes/{}/removeDatapoints",
-            self.region, self.project_id, self.region, self.endpoint_id
+            "{}/indexes/{}/removeDatapoints",
+            crate::endpoints::vertex_aiplatform(&self.region, &self.project_id),
+            self.endpoint_id
         );
         let body = serde_json::json!({ "datapointIds": [id] });
         self.client

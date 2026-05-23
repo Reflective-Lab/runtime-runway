@@ -1,4 +1,5 @@
 pub mod embedding;
+pub mod endpoints;
 pub mod local;
 pub mod remote;
 pub mod traits;

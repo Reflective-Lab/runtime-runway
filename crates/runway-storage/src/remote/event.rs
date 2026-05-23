@@ -36,8 +36,11 @@ impl FirestoreEventLog {
 
     fn doc_url(&self, event: &StoredEvent) -> String {
         format!(
-            "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/orgs/{}/apps/{}/events/{}",
-            self.project_id, event.org_id, event.app_id, event.event_id
+            "{}/orgs/{}/apps/{}/events/{}",
+            crate::endpoints::firestore_documents(&self.project_id),
+            event.org_id,
+            event.app_id,
+            event.event_id
         )
     }
 }
@@ -73,15 +76,12 @@ impl EventLog for FirestoreEventLog {
         // Choose the runQuery URL:
         //   - Both org_id + app_id set → subcollection on that app
         //   - Otherwise → collection group query at the database root
+        let docs_base = crate::endpoints::firestore_documents(&self.project_id);
         let url = match (&q.org_id, &q.app_id) {
-            (Some(org), Some(app)) => format!(
-                "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/orgs/{}/apps/{}:runQuery",
-                self.project_id, org, app
-            ),
-            _ => format!(
-                "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents:runQuery",
-                self.project_id
-            ),
+            (Some(org), Some(app)) => {
+                format!("{docs_base}/orgs/{org}/apps/{app}:runQuery")
+            }
+            _ => format!("{docs_base}:runQuery"),
         };
 
         // Build the list of field filters.

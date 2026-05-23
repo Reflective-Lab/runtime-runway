@@ -30,10 +30,8 @@ impl VertexEmbedder {
 
     fn endpoint(&self) -> String {
         format!(
-            "https://{region}-aiplatform.googleapis.com/v1/projects/{project}/locations/{region}/\
-             publishers/google/models/text-multilingual-embedding-002:predict",
-            region = self.region,
-            project = self.project_id,
+            "{}/publishers/google/models/text-multilingual-embedding-002:predict",
+            crate::endpoints::vertex_aiplatform(&self.region, &self.project_id)
         )
     }
 

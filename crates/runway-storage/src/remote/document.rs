@@ -31,10 +31,7 @@ impl FirestoreDocumentStore {
     }
 
     fn base_url(&self) -> String {
-        format!(
-            "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents",
-            self.project_id
-        )
+        crate::endpoints::firestore_documents(&self.project_id)
     }
 
     async fn bearer(&self) -> Result<String> {
@@ -126,10 +123,7 @@ impl DocumentStore for FirestoreDocumentStore {
     }
 
     async fn query(&self, collection: &str, q: Query) -> Result<Vec<Document>> {
-        let url = format!(
-            "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents:runQuery",
-            self.project_id
-        );
+        let url = format!("{}:runQuery", self.base_url());
 
         let mut filters = vec![serde_json::json!({
             "fieldFilter": {

@@ -23,7 +23,8 @@ impl GcsObjectStore {
 
     fn upload_url(&self, key: &str) -> String {
         format!(
-            "https://storage.googleapis.com/upload/storage/v1/b/{}/o?uploadType=media&name={}",
+            "{}/upload/storage/v1/b/{}/o?uploadType=media&name={}",
+            crate::endpoints::GCS_BASE,
             self.bucket,
             urlencoding::encode(key)
         )
@@ -31,7 +32,8 @@ impl GcsObjectStore {
 
     fn download_url(&self, key: &str) -> String {
         format!(
-            "https://storage.googleapis.com/storage/v1/b/{}/o/{}?alt=media",
+            "{}/storage/v1/b/{}/o/{}?alt=media",
+            crate::endpoints::GCS_BASE,
             self.bucket,
             urlencoding::encode(key)
         )
@@ -39,7 +41,8 @@ impl GcsObjectStore {
 
     fn meta_url(&self, key: &str) -> String {
         format!(
-            "https://storage.googleapis.com/storage/v1/b/{}/o/{}",
+            "{}/storage/v1/b/{}/o/{}",
+            crate::endpoints::GCS_BASE,
             self.bucket,
             urlencoding::encode(key)
         )
@@ -116,7 +119,8 @@ impl ObjectStore for GcsObjectStore {
 
     async fn list(&self, prefix: &str) -> Result<Vec<String>> {
         let url = format!(
-            "https://storage.googleapis.com/storage/v1/b/{}/o?prefix={}",
+            "{}/storage/v1/b/{}/o?prefix={}",
+            crate::endpoints::GCS_BASE,
             self.bucket,
             urlencoding::encode(prefix)
         );
