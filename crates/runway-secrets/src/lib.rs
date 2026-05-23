@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use secrecy::{ExposeSecret, SecretString};
 use tracing::instrument;
 
+pub mod metadata;
+
 pub use secrecy::SecretString as Secret;
 
 #[derive(Debug, thiserror::Error)]
@@ -58,19 +60,9 @@ impl Secrets {
     }
 
     async fn gcp_token(&self) -> Result<String, SecretsError> {
-        let resp = self.client
-            .get("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token")
-            .header("Metadata-Flavor", "Google")
-            .send()
+        metadata::fetch_access_token(&self.client)
             .await
-            .map_err(|e| SecretsError::Auth(e.to_string()))?
-            .json::<serde_json::Value>()
-            .await
-            .map_err(|e| SecretsError::Auth(e.to_string()))?;
-        Ok(resp["access_token"]
-            .as_str()
-            .unwrap_or_default()
-            .to_string())
+            .map_err(|e| SecretsError::Auth(e.to_string()))
     }
 
     /// Fetch a single app-scoped secret: `{env}-{app}-{key}`.

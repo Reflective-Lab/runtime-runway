@@ -66,18 +66,7 @@ impl ClaimsService {
     }
 
     async fn fetch_gcp_token(&self) -> anyhow::Result<String> {
-        let resp = self
-            .client
-            .get("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token")
-            .header("Metadata-Flavor", "Google")
-            .send()
-            .await?;
-
-        let body: serde_json::Value = resp.json().await?;
-        body["access_token"]
-            .as_str()
-            .map(str::to_string)
-            .ok_or_else(|| anyhow::anyhow!("no access_token in metadata response"))
+        runway_secrets::metadata::fetch_access_token(&self.client).await
     }
 }
 

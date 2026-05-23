@@ -86,17 +86,8 @@ impl GcpToken {
         match &self.source {
             TokenSource::Static(t) => Ok(t.clone()),
             TokenSource::Metadata => {
-                let resp = reqwest::Client::new()
-                    .get("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token")
-                    .header("Metadata-Flavor", "Google")
-                    .send()
-                    .await?
-                    .json::<serde_json::Value>()
-                    .await?;
-                Ok(resp["access_token"]
-                    .as_str()
-                    .unwrap_or_default()
-                    .to_string())
+                let client = reqwest::Client::new();
+                runway_secrets::metadata::fetch_access_token(&client).await
             }
         }
     }

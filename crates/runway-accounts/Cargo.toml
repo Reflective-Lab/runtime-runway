@@ -8,6 +8,7 @@ license.workspace = true
 
 [dependencies]
 runway-auth = { path = "../runway-auth" }
+runway-secrets = { path = "../runway-secrets" }
 runway-storage = { path = "../runway-storage" }
 
 anyhow.workspace = true
