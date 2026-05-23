@@ -7,8 +7,7 @@ pub struct ClaimsService {
 }
 
 impl ClaimsService {
-    pub fn new(client: reqwest::Client) -> Self {
-        let local_dev = std::env::var("LOCAL_DEV").as_deref() == Ok("true");
+    pub fn new(client: reqwest::Client, local_dev: bool) -> Self {
         Self { client, local_dev }
     }
 
@@ -79,5 +78,17 @@ impl ClaimsService {
             .as_str()
             .map(str::to_string)
             .ok_or_else(|| anyhow::anyhow!("no access_token in metadata response"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn claims_service_stores_local_dev_flag() {
+        let client = reqwest::Client::new();
+        let svc = ClaimsService::new(client, true);
+        assert!(svc.local_dev);
     }
 }

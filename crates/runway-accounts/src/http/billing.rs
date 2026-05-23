@@ -90,17 +90,16 @@ pub async fn create_checkout(
         .await?;
 
     // Store customer ID on the org so webhooks can look it up.
-    if let Some(org_id) = &account.org_id {
-        if let Ok(Some(mut org)) = state.store.get_org(org_id).await {
-            if org.stripe_customer_id.as_deref() != Some(&customer_id) {
-                org.stripe_customer_id = Some(customer_id.clone());
-                org.touch();
-                let _ = state.store.upsert_org(&org).await;
-            }
-        }
+    if let Some(org_id) = &account.org_id
+        && let Ok(Some(mut org)) = state.store.get_org(org_id).await
+        && org.stripe_customer_id.as_deref() != Some(&customer_id)
+    {
+        org.stripe_customer_id = Some(customer_id.clone());
+        org.touch();
+        let _ = state.store.upsert_org(&org).await;
     }
 
-    let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "https://apps.reflective.se".into());
+    let app_url = &state.config.app_url;
     let success_url = req
         .success_url
         .unwrap_or_else(|| format!("{app_url}?checkout=success"));
@@ -151,7 +150,7 @@ pub async fn create_portal(
         AccountError::Stripe("no billing account found — complete a checkout first".into())
     })?;
 
-    let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "https://apps.reflective.se".into());
+    let app_url = &state.config.app_url;
     let return_url = req
         .return_url
         .unwrap_or_else(|| format!("{app_url}?portal=returned"));

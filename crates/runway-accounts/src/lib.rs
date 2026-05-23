@@ -1,4 +1,5 @@
 pub mod claims;
+pub mod config;
 pub mod domain;
 pub mod error;
 mod http;
@@ -6,6 +7,7 @@ pub mod store;
 pub mod stripe;
 
 pub use claims::ClaimsService;
+pub use config::AccountsConfig;
 pub use domain::{Account, Org, OrgInvite, OrgMember, Plan, Role};
 pub use error::AccountError;
 pub use store::AccountStore;
@@ -21,15 +23,17 @@ pub struct AccountsState {
     pub store: AccountStore,
     pub stripe: StripeClient,
     pub claims: ClaimsService,
+    pub config: AccountsConfig,
 }
 
 impl AccountsState {
-    pub fn new(storage: Arc<StorageKit>) -> Self {
+    pub fn new(storage: Arc<StorageKit>, config: AccountsConfig) -> Self {
         let client = reqwest::Client::new();
         Self {
             store: AccountStore::new(storage),
             stripe: StripeClient::new(client.clone()),
-            claims: ClaimsService::new(client),
+            claims: ClaimsService::new(client, config.local_dev),
+            config,
         }
     }
 }
