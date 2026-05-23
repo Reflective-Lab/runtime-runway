@@ -15,10 +15,12 @@ pub struct StripeClient {
 }
 
 impl StripeClient {
-    pub fn new(client: reqwest::Client) -> Self {
-        let secret_key = std::env::var("STRIPE_SECRET_KEY")
-            .ok()
-            .filter(|v| !v.trim().is_empty());
+    pub fn new(client: reqwest::Client, secret_key: String) -> Self {
+        let secret_key = if secret_key.trim().is_empty() {
+            None
+        } else {
+            Some(secret_key)
+        };
         Self { client, secret_key }
     }
 

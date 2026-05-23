@@ -31,7 +31,7 @@ impl AccountsState {
         let client = reqwest::Client::new();
         Self {
             store: AccountStore::new(storage),
-            stripe: StripeClient::new(client.clone()),
+            stripe: StripeClient::new(client.clone(), config.stripe_secret_key.clone()),
             claims: ClaimsService::new(client, config.local_dev),
             config,
         }

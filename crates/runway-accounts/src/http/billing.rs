@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::{
-    Account, AccountsState,
+    Account, AccountsConfig, AccountsState,
     domain::{Org, Plan},
     error::AccountError,
     stripe::StripeSubscription,
@@ -263,7 +263,7 @@ async fn handle_subscription_updated(state: &AccountsState, subscription: &Value
         })
         .unwrap_or_default();
 
-    let plan = plan_from_price_ids(&price_ids);
+    let plan = plan_from_price_ids(&price_ids, &state.config);
 
     let Some(mut org) = find_org_by_customer(state, customer_id).await else {
         tracing::warn!(customer_id, "subscription update: org not found");
@@ -396,15 +396,17 @@ async fn resolve_or_create_org(
     Ok(org)
 }
 
-/// Map Stripe price IDs to a Plan by comparing against env-configured price IDs.
-fn plan_from_price_ids(price_ids: &[&str]) -> Plan {
-    let team = std::env::var("STRIPE_PRICE_TEAM_MONTHLY").unwrap_or_default();
-    let starter = std::env::var("STRIPE_PRICE_STARTER_MONTHLY").unwrap_or_default();
+/// Map Stripe price IDs to a Plan by comparing against the configured
+/// price IDs on `AccountsConfig`. Empty configured IDs make the matching
+/// plan unavailable; non-matching subscriptions fall back to `Plan::Free`.
+fn plan_from_price_ids(price_ids: &[&str], cfg: &AccountsConfig) -> Plan {
+    let team = cfg.stripe_price_team_monthly.as_str();
+    let starter = cfg.stripe_price_starter_monthly.as_str();
 
-    if !team.is_empty() && price_ids.contains(&team.as_str()) {
+    if !team.is_empty() && price_ids.contains(&team) {
         return Plan::Team;
     }
-    if !starter.is_empty() && price_ids.contains(&starter.as_str()) {
+    if !starter.is_empty() && price_ids.contains(&starter) {
         return Plan::Starter;
     }
     Plan::Free

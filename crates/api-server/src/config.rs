@@ -19,6 +19,13 @@ pub struct RunwayConfig {
     pub allowed_origins: String,
     /// Stripe webhook signing secret. Required in production.
     pub stripe_webhook_secret: String,
+    /// Stripe API secret key. Optional — empty disables Stripe entirely
+    /// (customer lookups, checkout, portal all degrade to no-ops).
+    pub stripe_secret_key: String,
+    /// Stripe price ID for the Team monthly plan. Optional.
+    pub stripe_price_team_monthly: String,
+    /// Stripe price ID for the Starter monthly plan. Optional.
+    pub stripe_price_starter_monthly: String,
 }
 
 impl RunwayConfig {
@@ -27,6 +34,11 @@ impl RunwayConfig {
 
         let allowed_origins = std::env::var("ALLOWED_ORIGINS").unwrap_or_default();
         let stripe_webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default();
+        let stripe_secret_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_default();
+        let stripe_price_team_monthly =
+            std::env::var("STRIPE_PRICE_TEAM_MONTHLY").unwrap_or_default();
+        let stripe_price_starter_monthly =
+            std::env::var("STRIPE_PRICE_STARTER_MONTHLY").unwrap_or_default();
 
         if !local_dev {
             anyhow::ensure!(
@@ -76,6 +88,9 @@ impl RunwayConfig {
             app_url,
             allowed_origins,
             stripe_webhook_secret,
+            stripe_secret_key,
+            stripe_price_team_monthly,
+            stripe_price_starter_monthly,
         })
     }
 
@@ -85,6 +100,9 @@ impl RunwayConfig {
             local_dev: self.local_dev,
             app_url: self.app_url.clone(),
             stripe_webhook_secret: self.stripe_webhook_secret.clone(),
+            stripe_secret_key: self.stripe_secret_key.clone(),
+            stripe_price_team_monthly: self.stripe_price_team_monthly.clone(),
+            stripe_price_starter_monthly: self.stripe_price_starter_monthly.clone(),
         }
     }
 }
