@@ -74,7 +74,7 @@ async fn main() -> Result<()> {
     let app = stack(routed, &mw_config);
 
     info!("api-server starting");
-    serve(app).await;
+    serve(app, cfg.port).await;
     Ok(())
 }
 

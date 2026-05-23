@@ -374,8 +374,9 @@ impl RunwayAppHost {
     }
 
     pub async fn serve(self, public_routes: Router, protected_routes: Router) -> Result<()> {
+        let port = self.config.port;
         let app = self.router(public_routes, protected_routes);
-        serve(app).await;
+        serve(app, port).await;
         Ok(())
     }
 

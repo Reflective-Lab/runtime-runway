@@ -26,6 +26,9 @@ pub struct RunwayConfig {
     pub stripe_price_team_monthly: String,
     /// Stripe price ID for the Starter monthly plan. Optional.
     pub stripe_price_starter_monthly: String,
+    /// TCP port to listen on. Cloud Run injects `PORT`; local dev
+    /// defaults to 8080.
+    pub port: u16,
 }
 
 impl RunwayConfig {
@@ -80,6 +83,11 @@ impl RunwayConfig {
         let app_url =
             std::env::var("APP_URL").unwrap_or_else(|_| "https://apps.reflective.se".to_string());
 
+        let port: u16 = std::env::var("PORT")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(8080);
+
         Ok(Self {
             local_dev,
             storage_path,
@@ -91,6 +99,7 @@ impl RunwayConfig {
             stripe_secret_key,
             stripe_price_team_monthly,
             stripe_price_starter_monthly,
+            port,
         })
     }
 

@@ -75,14 +75,13 @@ where
     )
 }
 
-/// Serve the router on PORT (default 8080) with graceful SIGTERM shutdown.
+/// Serve the router on the given port with graceful SIGTERM shutdown.
 ///
-/// Call `.with_state()` on your router before passing it here.
-pub async fn serve(app: Router) {
-    let port: u16 = std::env::var("PORT")
-        .ok()
-        .and_then(|p| p.parse().ok())
-        .unwrap_or(8080);
+/// Call `.with_state()` on your router before passing it here. The
+/// binary is responsible for resolving the port (Cloud Run sets `PORT`
+/// in the env; local dev defaults to 8080) — this crate no longer reads
+/// the environment.
+pub async fn serve(app: Router, port: u16) {
     let addr = format!("0.0.0.0:{port}");
     let listener = tokio::net::TcpListener::bind(&addr)
         .await

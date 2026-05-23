@@ -13,6 +13,9 @@ pub struct HostConfig {
     /// local-development default). App-host deployments that need
     /// stricter CORS set `ALLOWED_ORIGINS` in their environment.
     pub allowed_origins: String,
+    /// TCP port to listen on. Cloud Run injects `PORT`; local dev
+    /// defaults to 8080.
+    pub port: u16,
 }
 
 impl HostConfig {
@@ -43,12 +46,18 @@ impl HostConfig {
 
         let allowed_origins = std::env::var("ALLOWED_ORIGINS").unwrap_or_default();
 
+        let port: u16 = std::env::var("PORT")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(8080);
+
         Self {
             local_dev,
             storage_path,
             firebase_project_id,
             route_prefix,
             allowed_origins,
+            port,
         }
     }
 }
