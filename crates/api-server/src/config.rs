@@ -5,6 +5,7 @@
 //! read env directly.
 
 use anyhow::Result;
+use runway_accounts::AccountsConfig;
 
 #[derive(Debug, Clone)]
 pub struct RunwayConfig {
@@ -16,6 +17,8 @@ pub struct RunwayConfig {
     /// Comma-separated CORS allow-list. Required in production; empty in
     /// local_dev means "allow any origin".
     pub allowed_origins: String,
+    /// Stripe webhook signing secret. Required in production.
+    pub stripe_webhook_secret: String,
 }
 
 impl RunwayConfig {
@@ -23,11 +26,11 @@ impl RunwayConfig {
         let local_dev = std::env::var("LOCAL_DEV").as_deref() == Ok("true");
 
         let allowed_origins = std::env::var("ALLOWED_ORIGINS").unwrap_or_default();
+        let stripe_webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default();
 
         if !local_dev {
-            let stripe_secret = std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default();
             anyhow::ensure!(
-                !stripe_secret.is_empty(),
+                !stripe_webhook_secret.is_empty(),
                 "STRIPE_WEBHOOK_SECRET must be set in production (empty value disables HMAC verification)"
             );
             anyhow::ensure!(
@@ -72,6 +75,16 @@ impl RunwayConfig {
             route_prefix,
             app_url,
             allowed_origins,
+            stripe_webhook_secret,
         })
+    }
+
+    /// Project the runway-wide config onto the subset that `runway-accounts` needs.
+    pub fn accounts_config(&self) -> AccountsConfig {
+        AccountsConfig {
+            local_dev: self.local_dev,
+            app_url: self.app_url.clone(),
+            stripe_webhook_secret: self.stripe_webhook_secret.clone(),
+        }
     }
 }

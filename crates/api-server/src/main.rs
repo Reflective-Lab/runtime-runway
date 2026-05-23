@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use axum::{Extension, Json, Router, extract::State, http::StatusCode, routing::get};
 use chrono::Utc;
-use runway_accounts::{AccountsConfig, AccountsState};
+use runway_accounts::AccountsState;
 use runway_auth::{AuthContext, AuthLayer, FirebaseAuth};
 use runway_middleware::{MiddlewareConfig, serve, stack};
 use runway_storage::{
@@ -42,11 +42,7 @@ async fn main() -> Result<()> {
     let auth = FirebaseAuth::new(cfg.firebase_project_id.clone());
     let auth_layer = AuthLayer::new(auth, cfg.local_dev);
 
-    let accounts_config = AccountsConfig {
-        local_dev: cfg.local_dev,
-        app_url: cfg.app_url.clone(),
-    };
-    let accounts = AccountsState::new(Arc::clone(&storage), accounts_config);
+    let accounts = AccountsState::new(Arc::clone(&storage), cfg.accounts_config());
 
     // Public routes: no auth required.
     let public = Router::new()

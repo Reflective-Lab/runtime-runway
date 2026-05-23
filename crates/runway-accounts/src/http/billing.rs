@@ -169,14 +169,14 @@ pub async fn stripe_webhook(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default();
+    let webhook_secret = &state.config.stripe_webhook_secret;
 
     if !webhook_secret.is_empty() {
         let sig = headers
             .get("stripe-signature")
             .and_then(|v| v.to_str().ok())
             .unwrap_or("");
-        if !state.stripe.verify_signature(&body, sig, &webhook_secret) {
+        if !state.stripe.verify_signature(&body, sig, webhook_secret) {
             tracing::warn!("Stripe webhook signature invalid");
             return Err((
                 StatusCode::UNAUTHORIZED,

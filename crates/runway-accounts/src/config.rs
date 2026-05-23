@@ -3,6 +3,10 @@
 //! Populated by the binary at startup from env vars and passed into
 //! `AccountsState::new`. Library code reads config from the struct,
 //! never directly from the process environment.
+//!
+//! `AccountsConfig` intentionally has no `from_env` constructor — the
+//! binary owns env reading and composes this struct from its own
+//! top-level config (e.g. `RunwayConfig::accounts_config`).
 
 #[derive(Debug, Clone)]
 pub struct AccountsConfig {
@@ -11,6 +15,10 @@ pub struct AccountsConfig {
     /// Base URL used when generating Stripe checkout/portal return URLs.
     /// Production deployments must set this explicitly.
     pub app_url: String,
+    /// Stripe webhook signing secret. Empty disables HMAC verification —
+    /// acceptable in local development, but `RunwayConfig::from_env`
+    /// rejects an empty value in production.
+    pub stripe_webhook_secret: String,
 }
 
 impl AccountsConfig {
@@ -19,6 +27,7 @@ impl AccountsConfig {
         Self {
             local_dev: true,
             app_url: "http://localhost:3000".to_string(),
+            stripe_webhook_secret: String::new(),
         }
     }
 }
