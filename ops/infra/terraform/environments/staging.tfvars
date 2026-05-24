@@ -1,7 +1,7 @@
 project_id      = "reflective-staging"
 region          = "europe-west1"
 env             = "staging"
-apps            = ["folio", "inkling", "wolfgang", "scout", "quorum", "vouch"]
+apps            = ["folio", "inkling", "wolfgang", "scout", "quorum", "atlas", "vouch"]
 spanner_config  = "regional-europe-west1"
 redis_tier      = "BASIC"
 redis_memory_gb = 1
