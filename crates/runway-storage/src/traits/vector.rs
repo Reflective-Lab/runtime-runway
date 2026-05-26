@@ -19,7 +19,7 @@ pub struct Match {
 
 /// Vector store: upsert embeddings and run ANN search.
 ///
-/// `namespace` maps to a LanceDB table name or a Vertex AI index namespace.
+/// `namespace` maps to a redb table partition or a Vertex AI index namespace.
 #[async_trait]
 pub trait VectorStore: Send + Sync {
     async fn upsert(

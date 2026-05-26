@@ -33,7 +33,7 @@ pub struct EventQuery {
 
 /// Append-only event ledger. The ExperienceStore from the Converge architecture.
 ///
-/// Local impl:  SQLite WAL (survives restarts, feeds sync engine)
+/// Local impl:  redb (survives restarts, feeds sync engine)
 /// Remote impl: Firestore events subcollection + BigQuery streaming insert
 #[async_trait]
 pub trait EventLog: Send + Sync {

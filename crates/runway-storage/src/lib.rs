@@ -30,7 +30,7 @@ pub struct StorageKit {
 }
 
 impl StorageKit {
-    /// Local storage for Tauri desktop apps. Uses SQLite + LanceDB + local FS.
+    /// Local storage for Tauri desktop apps. Uses redb (documents, vectors, events) + local FS (objects) + fastembed (embeddings).
     /// `base` is the root directory (e.g. `~/.inkling` or `~/.wolfgang`).
     pub async fn local(base: impl AsRef<Path>) -> Result<Self> {
         local::LocalStorageKit::build(base.as_ref()).await
