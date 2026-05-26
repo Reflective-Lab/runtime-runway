@@ -5,7 +5,7 @@ use redb::{Database, ReadableTable, TableDefinition, WriteTransaction};
 
 use crate::traits::{
     Error, Result,
-    document::{Document, DocumentStore, Query},
+    document::{Document, DocumentStore, Filter, Order, Query},
 };
 
 // Table: (collection, id) → JSON string
@@ -127,17 +127,23 @@ impl DocumentStore for RedbDocumentStore {
                 .open_table(DOCS)
                 .map_err(|e| Error::Database(e.to_string()))?;
 
-            // Scan the range for this collection prefix
-            let end_col = format!("{}\x7f", collection);
+            // Scan only exactly the documents in this collection.
+            // Use an exclusive end key: (collection, "\xff") so that a collection
+            // named "foo" does not bleed into "foo-bar" or "foo/bar".
             let start: (&str, &str) = (collection.as_str(), "");
-            let end: (&str, &str) = (end_col.as_str(), "\x7f");
+            let end: (&str, &str) = (collection.as_str(), "\u{ffff}");
 
             let mut docs = Vec::new();
             for entry in table
                 .range(start..=end)
                 .map_err(|e| Error::Database(e.to_string()))?
             {
-                let (_, val) = entry.map_err(|e| Error::Database(e.to_string()))?;
+                let (key, val) = entry.map_err(|e| Error::Database(e.to_string()))?;
+                // Verify the collection name matches exactly (the composite key
+                // range scan is exact on the first component when end == start).
+                if key.value().0 != collection.as_str() {
+                    continue;
+                }
                 let doc: Document = serde_json::from_str(val.value())
                     .map_err(|e| Error::Serialisation(e.to_string()))?;
                 docs.push(doc);
@@ -147,7 +153,7 @@ impl DocumentStore for RedbDocumentStore {
         .await
         .map_err(|e| Error::Other(e.to_string()))??;
 
-        // Apply filters in Rust (offline scale is small enough for this)
+        // Apply all filters in Rust (local scale is small enough).
         let mut result: Vec<Document> = all
             .into_iter()
             .filter(|doc| {
@@ -156,8 +162,8 @@ impl DocumentStore for RedbDocumentStore {
                 {
                     return false;
                 }
-                if let Some(crate::traits::document::Filter::Eq(ref field, ref val)) = q.filter
-                    && doc.data.get(field) != Some(val)
+                if let Some(ref filter) = q.filter
+                    && !apply_filter(doc, filter)
                 {
                     return false;
                 }
@@ -165,14 +171,91 @@ impl DocumentStore for RedbDocumentStore {
             })
             .collect();
 
-        // Sort by updated_at desc by default
-        result.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        // Apply ordering.
+        match q.order_by {
+            Some((ref field, Order::Asc)) => {
+                let field = field.clone();
+                result.sort_by(|a, b| {
+                    let av = a.data.get(&field);
+                    let bv = b.data.get(&field);
+                    cmp_values(av, bv)
+                });
+            }
+            Some((ref field, Order::Desc)) => {
+                let field = field.clone();
+                result.sort_by(|a, b| {
+                    let av = a.data.get(&field);
+                    let bv = b.data.get(&field);
+                    cmp_values(bv, av)
+                });
+            }
+            None => {
+                // Default: sort by updated_at descending.
+                result.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+            }
+        }
 
         if let Some(n) = q.limit {
             result.truncate(n);
         }
 
         Ok(result)
+    }
+}
+
+/// Recursively evaluate a [`Filter`] against a single document.
+fn apply_filter(doc: &Document, filter: &Filter) -> bool {
+    match filter {
+        Filter::Eq(field, val) => doc.data.get(field) == Some(val),
+        Filter::Gt(field, val) => doc
+            .data
+            .get(field)
+            .map(|v| cmp_values(Some(v), Some(val)).is_gt())
+            .unwrap_or(false),
+        Filter::Lt(field, val) => doc
+            .data
+            .get(field)
+            .map(|v| cmp_values(Some(v), Some(val)).is_lt())
+            .unwrap_or(false),
+        Filter::Gte(field, val) => doc
+            .data
+            .get(field)
+            .map(|v| !cmp_values(Some(v), Some(val)).is_lt())
+            .unwrap_or(false),
+        Filter::Lte(field, val) => doc
+            .data
+            .get(field)
+            .map(|v| !cmp_values(Some(v), Some(val)).is_gt())
+            .unwrap_or(false),
+        Filter::And(filters) => filters.iter().all(|f| apply_filter(doc, f)),
+        Filter::Or(filters) => filters.iter().any(|f| apply_filter(doc, f)),
+    }
+}
+
+/// Total order over [`serde_json::Value`] suitable for sorting and range
+/// comparisons. Numbers are compared numerically; everything else falls back
+/// to string representation ordering.
+fn cmp_values(a: Option<&serde_json::Value>, b: Option<&serde_json::Value>) -> std::cmp::Ordering {
+    use serde_json::Value;
+    use std::cmp::Ordering;
+    match (a, b) {
+        (None, None) => Ordering::Equal,
+        (None, Some(_)) => Ordering::Less,
+        (Some(_), None) => Ordering::Greater,
+        (Some(av), Some(bv)) => match (av, bv) {
+            (Value::Number(an), Value::Number(bn)) => {
+                let af = an.as_f64().unwrap_or(f64::NAN);
+                let bf = bn.as_f64().unwrap_or(f64::NAN);
+                af.partial_cmp(&bf).unwrap_or(Ordering::Equal)
+            }
+            (Value::String(a), Value::String(b)) => a.cmp(b),
+            (Value::Bool(a), Value::Bool(b)) => a.cmp(b),
+            _ => {
+                let as_ = av.to_string();
+                let bs = bv.to_string();
+                as_.cmp(&bs)
+            }
+        },
     }
 }
 
