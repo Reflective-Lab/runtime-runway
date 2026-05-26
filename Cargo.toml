@@ -10,6 +10,7 @@ members = [
     "crates/runway-middleware",
     "crates/runway-secrets",
     "crates/runway-storage",
+    "crates/runway-storage-contract",
     "crates/runway-telemetry",
 ]
 
