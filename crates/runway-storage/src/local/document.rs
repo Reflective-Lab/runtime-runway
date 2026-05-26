@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use redb::{Database, TableDefinition, WriteTransaction};
+use redb::{Database, ReadableTable, TableDefinition, WriteTransaction};
 
 use crate::traits::{
     Error, Result,
@@ -32,7 +32,7 @@ impl DocumentStore for RedbDocumentStore {
         let db = self.db.clone();
         let collection = collection.to_string();
         let id = doc.id.clone();
-        let json = serde_json::to_string(&doc).map_err(|e| Error::Serialisation(e.to_string()))?;
+        let mut doc = doc;
 
         tokio::task::spawn_blocking(move || {
             let tx = db
@@ -42,6 +42,18 @@ impl DocumentStore for RedbDocumentStore {
                 let mut table = tx
                     .open_table(DOCS)
                     .map_err(|e| Error::Database(e.to_string()))?;
+                // Preserve created_at if a document with this id already exists.
+                if let Some(existing) = table
+                    .get((collection.as_str(), id.as_str()))
+                    .map_err(|e| Error::Database(e.to_string()))?
+                {
+                    let prior: Document = serde_json::from_str(existing.value())
+                        .map_err(|e| Error::Serialisation(e.to_string()))?;
+                    doc.created_at = prior.created_at;
+                }
+                doc.updated_at = chrono::Utc::now();
+                let json =
+                    serde_json::to_string(&doc).map_err(|e| Error::Serialisation(e.to_string()))?;
                 table
                     .insert((collection.as_str(), id.as_str()), json.as_str())
                     .map_err(|e| Error::Database(e.to_string()))?;
@@ -161,5 +173,50 @@ impl DocumentStore for RedbDocumentStore {
         }
 
         Ok(result)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use redb::Database;
+    use serde_json::json;
+    use tempfile::tempdir;
+
+    use super::{RedbDocumentStore, init_tables};
+    use crate::traits::document::{Document, DocumentStore};
+
+    async fn build_store() -> RedbDocumentStore {
+        let dir = tempdir().unwrap();
+        let db = Arc::new(Database::create(dir.path().join("test.redb")).unwrap());
+        {
+            let tx = db.begin_write().unwrap();
+            init_tables(&tx).unwrap();
+            tx.commit().unwrap();
+        }
+        // Keep the temp directory alive for the duration of the test.
+        std::mem::forget(dir);
+        RedbDocumentStore::new(db)
+    }
+
+    #[tokio::test]
+    async fn put_preserves_created_at_on_overwrite() {
+        let store = build_store().await;
+        let doc = Document::new("k1", json!({"v": 1})).unwrap();
+        let original_created = doc.created_at;
+        store.put("coll", doc).await.unwrap();
+
+        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+
+        let doc2 = Document::new("k1", json!({"v": 2})).unwrap();
+        store.put("coll", doc2).await.unwrap();
+
+        let got = store.get("coll", "k1").await.unwrap().expect("doc present");
+        assert_eq!(
+            got.created_at, original_created,
+            "created_at must be preserved"
+        );
+        assert!(got.updated_at > original_created, "updated_at must advance");
     }
 }
