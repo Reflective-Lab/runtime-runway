@@ -13,7 +13,18 @@ runway-storage = { workspace = true }
 runway-telemetry = { workspace = true }
 
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 axum = { workspace = true }
+chrono = { workspace = true }
+futures = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+tokio = { workspace = true, features = ["sync", "rt-multi-thread", "macros", "signal"] }
+tokio-stream = { workspace = true }
+tonic = { workspace = true }
 tracing = { workspace = true }
+uuid = { workspace = true, features = ["v4", "serde"] }
+
+[dev-dependencies]
+reqwest = { workspace = true }
+tower = { version = "0.5" }
