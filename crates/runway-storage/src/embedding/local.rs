@@ -39,6 +39,11 @@ impl EmbeddingProvider for LocalEmbedder {
     }
 
     async fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Embedding>> {
+        for text in texts {
+            if text.trim().is_empty() {
+                return Err(Error::Other("embedding input is empty".into()));
+            }
+        }
         // fastembed is synchronous; run in a blocking thread to avoid blocking the async runtime
         let owned: Vec<String> = texts.iter().map(|s| s.to_string()).collect();
         let raw: Vec<Vec<f32>> = tokio::task::spawn_blocking(move || embed_sync(&owned))

@@ -64,5 +64,22 @@ pub async fn run_embedding_shape_suite(
         }
     });
 
+    contract_test!(&report, "embed_batch_rejects_empty_element", async {
+        match provider
+            .embed_batch(&["valid text", "", "more valid"])
+            .await
+        {
+            Ok(_) => Err("expected error for empty element in batch".to_string()),
+            Err(e) => {
+                contract_assert!(
+                    e.to_string().contains("empty"),
+                    "expected 'empty' in error message, got: {}",
+                    e
+                );
+                Ok(())
+            }
+        }
+    });
+
     report
 }

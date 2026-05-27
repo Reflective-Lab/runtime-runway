@@ -60,6 +60,11 @@ impl EmbeddingProvider for VertexEmbedder {
     }
 
     async fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Embedding>> {
+        for text in texts {
+            if text.trim().is_empty() {
+                return Err(Error::Other("embedding input is empty".into()));
+            }
+        }
         let instances: Vec<_> = texts
             .iter()
             .map(|t| serde_json::json!({ "content": t }))
