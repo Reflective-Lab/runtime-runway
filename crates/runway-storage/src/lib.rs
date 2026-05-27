@@ -6,7 +6,7 @@ pub mod traits;
 
 pub use traits::{
     document::{Document, DocumentStore, Filter, Order, Query},
-    embedding::EmbeddingProvider,
+    embedding::{EMBEDDING_DIMS, Embedding, EmbeddingProvider},
     event::{EventLog, StoredEvent},
     object::ObjectStore,
     vector::{Match, VectorStore},
