@@ -2,13 +2,17 @@ mod config;
 pub use config::HostConfig;
 
 pub mod approvals;
+pub mod builder;
 pub mod context;
 pub mod health;
 pub mod module;
 pub mod realtime;
 pub mod sse;
 
+pub use builder::{BuiltHost, RunwayAppHostBuilder};
+pub use context::HostContext;
 pub use module::{HelmModule, TonicService};
+pub use realtime::{EventEnvelope, EventHub, EventHubHandle};
 
 use std::sync::Arc;
 
