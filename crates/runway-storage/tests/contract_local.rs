@@ -3,14 +3,30 @@
 use std::sync::Arc;
 
 use runway_storage::StorageKit;
-use runway_storage_contract::{ContractContext, document};
+use runway_storage_contract::{ContractContext, document, embedding};
+
+async fn build_kit() -> (StorageKit, tempfile::TempDir) {
+    let tmp = tempfile::tempdir().unwrap();
+    let kit = StorageKit::local(tmp.path()).await.unwrap();
+    (kit, tmp)
+}
+
+fn ctx() -> ContractContext {
+    ContractContext::new("redb+local-fs+fastembed", "_contract")
+}
 
 #[tokio::test]
 async fn document_contract() {
-    let tmp = tempfile::tempdir().unwrap();
-    let kit = StorageKit::local(tmp.path()).await.unwrap();
-    let ctx = ContractContext::new("redb", "_contract");
-    document::run_document_suite(Arc::clone(&kit.documents), ctx)
+    let (kit, _tmp) = build_kit().await;
+    document::run_document_suite(Arc::clone(&kit.documents), ctx())
+        .await
+        .assert_passed();
+}
+
+#[tokio::test]
+async fn embedding_contract() {
+    let (kit, _tmp) = build_kit().await;
+    embedding::run_embedding_shape_suite(Arc::clone(&kit.embeddings), ctx())
         .await
         .assert_passed();
 }

@@ -2,7 +2,10 @@ use async_trait::async_trait;
 
 use crate::{
     remote::GcpToken,
-    traits::{Error, Result, embedding::EmbeddingProvider, vector::EMBEDDING_DIMS},
+    traits::{
+        Error, Result,
+        embedding::{Embedding, EmbeddingProvider},
+    },
 };
 
 /// Vertex AI `text-multilingual-embedding-002` (768 dims).
@@ -45,7 +48,10 @@ impl VertexEmbedder {
 
 #[async_trait]
 impl EmbeddingProvider for VertexEmbedder {
-    async fn embed(&self, text: &str) -> Result<Vec<f32>> {
+    async fn embed(&self, text: &str) -> Result<Embedding> {
+        if text.trim().is_empty() {
+            return Err(Error::Other("embedding input is empty".into()));
+        }
         let results = self.embed_batch(&[text]).await?;
         results
             .into_iter()
@@ -53,7 +59,7 @@ impl EmbeddingProvider for VertexEmbedder {
             .ok_or_else(|| Error::Other("empty embedding response".into()))
     }
 
-    async fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+    async fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Embedding>> {
         let instances: Vec<_> = texts
             .iter()
             .map(|t| serde_json::json!({ "content": t }))
@@ -84,19 +90,16 @@ impl EmbeddingProvider for VertexEmbedder {
                 let values = p["embeddings"]["values"]
                     .as_array()
                     .ok_or_else(|| Error::Other("missing embeddings.values".into()))?;
-                values
+                let floats: Vec<f32> = values
                     .iter()
                     .map(|v| {
                         v.as_f64()
                             .map(|f| f as f32)
                             .ok_or_else(|| Error::Other("non-float in embedding".into()))
                     })
-                    .collect::<Result<Vec<f32>>>()
+                    .collect::<Result<Vec<f32>>>()?;
+                Embedding::new(floats)
             })
             .collect()
-    }
-
-    fn dims(&self) -> usize {
-        EMBEDDING_DIMS
     }
 }
