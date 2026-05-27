@@ -6,7 +6,8 @@ use serde_json::Value;
 
 use crate::traits::{
     Error, Result,
-    vector::{EMBEDDING_DIMS, Match, VectorStore},
+    embedding::Embedding,
+    vector::{Match, VectorStore},
 };
 
 const VECTORS: TableDefinition<(&str, &str), &str> = TableDefinition::new("vectors");
@@ -40,23 +41,16 @@ impl VectorStore for FileVectorStore {
         &self,
         namespace: &str,
         id: &str,
-        embedding: &[f32],
+        embedding: &Embedding,
         text: Option<&str>,
         metadata: HashMap<String, Value>,
     ) -> Result<()> {
-        if embedding.len() != EMBEDDING_DIMS {
-            return Err(Error::Other(format!(
-                "embedding has {} dims, expected {EMBEDDING_DIMS}",
-                embedding.len()
-            )));
-        }
-
         let db = self.db.clone();
         let namespace = namespace.to_string();
         let id = id.to_string();
         let entry = VectorEntry {
             id: id.clone(),
-            embedding: embedding.to_vec(),
+            embedding: embedding.as_slice().to_vec(),
             text: text.map(|s| s.to_string()),
             metadata,
         };
@@ -81,10 +75,10 @@ impl VectorStore for FileVectorStore {
         .map_err(|e| Error::Other(e.to_string()))?
     }
 
-    async fn search(&self, namespace: &str, query: &[f32], top_k: usize) -> Result<Vec<Match>> {
+    async fn search(&self, namespace: &str, query: &Embedding, top_k: usize) -> Result<Vec<Match>> {
         let db = self.db.clone();
         let namespace = namespace.to_string();
-        let query = query.to_vec();
+        let query = query.as_slice().to_vec();
 
         let matches: Vec<Match> = tokio::task::spawn_blocking(move || {
             let tx = db
@@ -94,9 +88,14 @@ impl VectorStore for FileVectorStore {
                 .open_table(VECTORS)
                 .map_err(|e| Error::Database(e.to_string()))?;
 
-            let end_ns = format!("{}\x7f", namespace);
+            // Scan only exactly the vectors in this namespace.
+            // Upper bound uses U+10FFFF (last valid Unicode code point, UTF-8
+            // bytes [0xF4,0x8F,0xBF,0xBF]) so that every valid vector id —
+            // including those containing supplementary-plane characters such as
+            // emoji — falls within the range. A namespace named "foo" will not
+            // bleed into "foo-bar" or "foo/bar".
             let start: (&str, &str) = (namespace.as_str(), "");
-            let end: (&str, &str) = (end_ns.as_str(), "\x7f");
+            let end: (&str, &str) = (namespace.as_str(), "\u{10ffff}");
 
             let mut scored: Vec<(f32, VectorEntry)> = Vec::new();
             for entry in table

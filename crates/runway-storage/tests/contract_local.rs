@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use runway_storage::StorageKit;
-use runway_storage_contract::{ContractContext, document, embedding};
+use runway_storage_contract::{ContractContext, document, embedding, vector};
 
 async fn build_kit() -> (StorageKit, tempfile::TempDir) {
     let tmp = tempfile::tempdir().unwrap();
@@ -27,6 +27,14 @@ async fn document_contract() {
 async fn embedding_contract() {
     let (kit, _tmp) = build_kit().await;
     embedding::run_embedding_shape_suite(Arc::clone(&kit.embeddings), ctx())
+        .await
+        .assert_passed();
+}
+
+#[tokio::test]
+async fn vector_contract() {
+    let (kit, _tmp) = build_kit().await;
+    vector::run_vector_shape_suite(Arc::clone(&kit.vectors), ctx())
         .await
         .assert_passed();
 }
