@@ -1,0 +1,64 @@
+name: contract (staging GCP)
+
+# Required repo secrets:
+#   GCP_WORKLOAD_IDENTITY_PROVIDER  — workload identity provider resource name
+#   GCP_CONTRACT_SERVICE_ACCOUNT    — service account email with contract permissions
+#   RUNWAY_CONTRACT_PROJECT         — staging GCP project id
+#   RUNWAY_CONTRACT_BUCKET          — staging GCS bucket
+#   RUNWAY_CONTRACT_REGION          — Vertex AI region (e.g. us-central1)
+#
+# The workload identity binding and the contract service account must be
+# provisioned via Terraform in ops/ before this workflow can succeed.
+# An access token for RUNWAY_CONTRACT_TOKEN is derived from workload identity
+# at run time via google-github-actions/auth's `access_token` output.
+
+on:
+  push:
+    tags:
+      - "release/*"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_VERSION: "1.94.0"
+
+permissions:
+  contents: read
+  id-token: write   # for workload identity federation
+
+jobs:
+  contract-staging:
+    name: Contract Suite (Staging GCP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout converge (sibling dependency)
+        uses: actions/checkout@v4
+        with:
+          repository: Reflective-Lab/converge
+          path: ../converge
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Install just
+        uses: extractions/setup-just@v2
+      - name: Authenticate to GCP via workload identity
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_CONTRACT_SERVICE_ACCOUNT }}
+          token_format: access_token
+      - name: Run contract suite against staging GCP
+        env:
+          RUNWAY_CONTRACT_PROJECT: ${{ secrets.RUNWAY_CONTRACT_PROJECT }}
+          RUNWAY_CONTRACT_BUCKET: ${{ secrets.RUNWAY_CONTRACT_BUCKET }}
+          RUNWAY_CONTRACT_REGION: ${{ secrets.RUNWAY_CONTRACT_REGION }}
+          RUNWAY_CONTRACT_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: just contract-staging
