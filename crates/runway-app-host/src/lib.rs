@@ -2,6 +2,7 @@ mod config;
 pub use config::HostConfig;
 
 pub mod context;
+pub mod health;
 pub mod module;
 pub mod realtime;
 
