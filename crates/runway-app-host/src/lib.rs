@@ -1,6 +1,8 @@
 mod config;
 pub use config::HostConfig;
 
+pub mod realtime;
+
 use std::sync::Arc;
 
 use anyhow::Result;
