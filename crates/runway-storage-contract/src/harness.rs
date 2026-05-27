@@ -80,7 +80,8 @@ impl SuiteReport {
     }
 }
 
-/// Runs an async closure, captures panics and `Err` returns into the report.
+/// Runs an async closure, captures `Err` returns into the report.
+/// Panics in the body propagate to the test runner.
 #[macro_export]
 macro_rules! contract_test {
     ($report:expr, $name:literal, $body:expr) => {{

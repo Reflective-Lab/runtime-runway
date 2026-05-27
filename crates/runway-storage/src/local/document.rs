@@ -128,10 +128,13 @@ impl DocumentStore for RedbDocumentStore {
                 .map_err(|e| Error::Database(e.to_string()))?;
 
             // Scan only exactly the documents in this collection.
-            // Use an exclusive end key: (collection, "\xff") so that a collection
-            // named "foo" does not bleed into "foo-bar" or "foo/bar".
+            // Upper bound uses U+10FFFF (last valid Unicode code point, UTF-8
+            // bytes [0xF4,0x8F,0xBF,0xBF]) so that every valid document id —
+            // including those containing supplementary-plane characters such as
+            // emoji — falls within the range. A collection named "foo" will not
+            // bleed into "foo-bar" or "foo/bar".
             let start: (&str, &str) = (collection.as_str(), "");
-            let end: (&str, &str) = (collection.as_str(), "\u{ffff}");
+            let end: (&str, &str) = (collection.as_str(), "\u{10ffff}");
 
             let mut docs = Vec::new();
             for entry in table
@@ -235,6 +238,12 @@ fn apply_filter(doc: &Document, filter: &Filter) -> bool {
 /// Total order over [`serde_json::Value`] suitable for sorting and range
 /// comparisons. Numbers are compared numerically; everything else falls back
 /// to string representation ordering.
+///
+/// **Note:** when serde_json is built with the `arbitrary_precision` feature,
+/// `Number::as_f64()` can return `None`; those values become `f64::NAN` and
+/// compare `Equal` to every other number (NaN breaks transitivity). This is
+/// acceptable for the local backend's local-scale data but means the order is
+/// only a total order for normal (representable as f64) numeric values.
 fn cmp_values(a: Option<&serde_json::Value>, b: Option<&serde_json::Value>) -> std::cmp::Ordering {
     use serde_json::Value;
     use std::cmp::Ordering;
