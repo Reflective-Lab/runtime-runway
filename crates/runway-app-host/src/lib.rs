@@ -1,7 +1,11 @@
 mod config;
 pub use config::HostConfig;
 
+pub mod context;
+pub mod module;
 pub mod realtime;
+
+pub use module::{HelmModule, TonicService};
 
 use std::sync::Arc;
 
