@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use runway_storage::StorageKit;
 
-use crate::realtime::EventHubHandle;
 use crate::AppExecutionPacket;
+use crate::realtime::EventHubHandle;
 
 #[derive(Clone)]
 pub struct HostContext {
