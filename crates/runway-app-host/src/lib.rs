@@ -5,6 +5,7 @@ pub mod context;
 pub mod health;
 pub mod module;
 pub mod realtime;
+pub mod sse;
 
 pub use module::{HelmModule, TonicService};
 
