@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use chrono::Utc;
 use redb::{Database, ReadableTable, TableDefinition, WriteTransaction};
 
 use crate::traits::{
@@ -161,14 +162,43 @@ impl SyncableEventLog for RedbEventLog {
         let ids: Vec<String> = event_ids.to_vec();
 
         tokio::task::spawn_blocking(move || {
+            let now = Utc::now();
             let tx = db
                 .begin_write()
                 .map_err(|e| Error::Database(e.to_string()))?;
             {
+                let mut events = tx
+                    .open_table(EVENTS)
+                    .map_err(|e| Error::Database(e.to_string()))?;
                 let mut unsynced = tx
                     .open_table(UNSYNCED)
                     .map_err(|e| Error::Database(e.to_string()))?;
                 for id in &ids {
+                    // Rewrite the event record with synced_at set.
+                    // Read-then-drop the guard before the mutable insert to
+                    // satisfy the borrow checker.
+                    let updated_json: Option<String> = {
+                        let guard = events
+                            .get(id.as_str())
+                            .map_err(|e| Error::Database(e.to_string()))?;
+                        if let Some(g) = guard {
+                            let mut ev: StoredEvent = serde_json::from_str(g.value())
+                                .map_err(|e| Error::Serialisation(e.to_string()))?;
+                            ev.synced_at = Some(now);
+                            Some(
+                                serde_json::to_string(&ev)
+                                    .map_err(|e| Error::Serialisation(e.to_string()))?,
+                            )
+                        } else {
+                            None
+                        }
+                        // guard dropped here — immutable borrow ends
+                    };
+                    if let Some(json) = updated_json {
+                        events
+                            .insert(id.as_str(), json.as_str())
+                            .map_err(|e| Error::Database(e.to_string()))?;
+                    }
                     unsynced
                         .remove(id.as_str())
                         .map_err(|e| Error::Database(e.to_string()))?;

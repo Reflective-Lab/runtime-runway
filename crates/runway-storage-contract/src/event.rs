@@ -153,6 +153,7 @@ pub async fn run_syncable_event_suite(
         log.mark_synced(std::slice::from_ref(&evt_id))
             .await
             .map_err(|e| e.to_string())?;
+        // The event should no longer appear in unsynced queries.
         let unsynced = log
             .query_unsynced(EventQuery {
                 event_type: Some("type.mark_synced".into()),
@@ -163,6 +164,22 @@ pub async fn run_syncable_event_suite(
         contract_assert!(
             !unsynced.iter().any(|e| e.event_id == evt_id),
             "marked-synced event still in unsynced query"
+        );
+        // The event record itself must have synced_at populated.
+        let all = log
+            .query(EventQuery {
+                event_type: Some("type.mark_synced".into()),
+                ..base_query(&ctx)
+            })
+            .await
+            .map_err(|e| e.to_string())?;
+        let found = all
+            .iter()
+            .find(|e| e.event_id == evt_id)
+            .ok_or("marked-synced event not found in query")?;
+        contract_assert!(
+            found.synced_at.is_some(),
+            "mark_synced did not set synced_at on the stored event"
         );
         Ok(())
     });

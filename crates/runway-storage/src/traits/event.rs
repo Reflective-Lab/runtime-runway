@@ -15,7 +15,10 @@ pub struct StoredEvent {
     pub fact_id: Option<String>,
     pub payload: Value,
     pub occurred_at: DateTime<Utc>,
-    /// Populated only in local store — tracks whether this event has been synced to remote.
+    /// Set by [`SyncableEventLog::mark_synced`] to the timestamp at which the
+    /// event was confirmed synced to the remote backend. `None` while unsynced.
+    /// Only the local redb backend writes this field; remote backends leave it
+    /// `None` because events are written directly to the remote store.
     #[serde(default)]
     pub synced_at: Option<DateTime<Utc>>,
 }

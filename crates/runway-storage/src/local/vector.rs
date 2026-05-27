@@ -102,7 +102,13 @@ impl VectorStore for FileVectorStore {
                 .range(start..=end)
                 .map_err(|e| Error::Database(e.to_string()))?
             {
-                let (_, val) = entry.map_err(|e| Error::Database(e.to_string()))?;
+                let (key, val) = entry.map_err(|e| Error::Database(e.to_string()))?;
+                // Defensive guard: verify the namespace component matches exactly.
+                // The range scan is correct, but this prevents any future redb
+                // range edge cases from leaking cross-namespace results.
+                if key.value().0 != namespace.as_str() {
+                    continue;
+                }
                 let ve: VectorEntry = serde_json::from_str(val.value())
                     .map_err(|e| Error::Serialisation(e.to_string()))?;
                 let score = cosine_similarity(&query, &ve.embedding);
