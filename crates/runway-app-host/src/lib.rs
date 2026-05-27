@@ -1,6 +1,7 @@
 mod config;
 pub use config::HostConfig;
 
+pub mod approvals;
 pub mod context;
 pub mod health;
 pub mod module;
