@@ -5,7 +5,7 @@ use redb::{Database, ReadableTable, TableDefinition, WriteTransaction};
 
 use crate::traits::{
     Error, Result,
-    event::{EventLog, EventQuery, StoredEvent},
+    event::{EventLog, EventQuery, StoredEvent, SyncableEventLog},
 };
 
 // Table: event_id → JSON string (primary store, deduplicates by event_id)
@@ -27,51 +27,9 @@ impl RedbEventLog {
     pub fn new(db: Arc<Database>) -> Self {
         Self { db }
     }
-}
 
-#[async_trait]
-impl EventLog for RedbEventLog {
-    async fn append(&self, event: StoredEvent) -> Result<()> {
+    async fn query_inner(&self, q: EventQuery, unsynced_only: bool) -> Result<Vec<StoredEvent>> {
         let db = self.db.clone();
-        let json =
-            serde_json::to_string(&event).map_err(|e| Error::Serialisation(e.to_string()))?;
-        let id = event.event_id.clone();
-
-        tokio::task::spawn_blocking(move || {
-            let tx = db
-                .begin_write()
-                .map_err(|e| Error::Database(e.to_string()))?;
-            {
-                let mut events = tx
-                    .open_table(EVENTS)
-                    .map_err(|e| Error::Database(e.to_string()))?;
-                // OR IGNORE equivalent: only insert if not present
-                if events
-                    .get(id.as_str())
-                    .map_err(|e| Error::Database(e.to_string()))?
-                    .is_none()
-                {
-                    events
-                        .insert(id.as_str(), json.as_str())
-                        .map_err(|e| Error::Database(e.to_string()))?;
-
-                    let mut unsynced = tx
-                        .open_table(UNSYNCED)
-                        .map_err(|e| Error::Database(e.to_string()))?;
-                    unsynced
-                        .insert(id.as_str(), "")
-                        .map_err(|e| Error::Database(e.to_string()))?;
-                }
-            }
-            tx.commit().map_err(|e| Error::Database(e.to_string()))
-        })
-        .await
-        .map_err(|e| Error::Other(e.to_string()))?
-    }
-
-    async fn query(&self, q: EventQuery) -> Result<Vec<StoredEvent>> {
-        let db = self.db.clone();
-        let unsynced_only = q.unsynced_only;
 
         let raw: Vec<StoredEvent> = tokio::task::spawn_blocking(move || {
             let tx = db
@@ -144,6 +102,58 @@ impl EventLog for RedbEventLog {
             result.truncate(n);
         }
         Ok(result)
+    }
+}
+
+#[async_trait]
+impl EventLog for RedbEventLog {
+    async fn append(&self, event: StoredEvent) -> Result<()> {
+        let db = self.db.clone();
+        let json =
+            serde_json::to_string(&event).map_err(|e| Error::Serialisation(e.to_string()))?;
+        let id = event.event_id.clone();
+
+        tokio::task::spawn_blocking(move || {
+            let tx = db
+                .begin_write()
+                .map_err(|e| Error::Database(e.to_string()))?;
+            {
+                let mut events = tx
+                    .open_table(EVENTS)
+                    .map_err(|e| Error::Database(e.to_string()))?;
+                // OR IGNORE equivalent: only insert if not present
+                if events
+                    .get(id.as_str())
+                    .map_err(|e| Error::Database(e.to_string()))?
+                    .is_none()
+                {
+                    events
+                        .insert(id.as_str(), json.as_str())
+                        .map_err(|e| Error::Database(e.to_string()))?;
+
+                    let mut unsynced = tx
+                        .open_table(UNSYNCED)
+                        .map_err(|e| Error::Database(e.to_string()))?;
+                    unsynced
+                        .insert(id.as_str(), "")
+                        .map_err(|e| Error::Database(e.to_string()))?;
+                }
+            }
+            tx.commit().map_err(|e| Error::Database(e.to_string()))
+        })
+        .await
+        .map_err(|e| Error::Other(e.to_string()))?
+    }
+
+    async fn query(&self, q: EventQuery) -> Result<Vec<StoredEvent>> {
+        self.query_inner(q, false).await
+    }
+}
+
+#[async_trait]
+impl SyncableEventLog for RedbEventLog {
+    async fn query_unsynced(&self, q: EventQuery) -> Result<Vec<StoredEvent>> {
+        self.query_inner(q, true).await
     }
 
     async fn mark_synced(&self, event_ids: &[String]) -> Result<()> {

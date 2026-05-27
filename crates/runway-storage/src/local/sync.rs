@@ -61,14 +61,13 @@ impl SyncEngine {
     // ── Push phase ────────────────────────────────────────────────────────────
 
     async fn push_events(&self) -> Result<usize, Error> {
-        let unsynced = self
+        let syncable = self
             .local
-            .events
-            .query(EventQuery {
-                unsynced_only: true,
-                ..Default::default()
-            })
-            .await?;
+            .syncable_events
+            .as_ref()
+            .ok_or_else(|| Error::Other("local StorageKit missing syncable_events".into()))?;
+
+        let unsynced = syncable.query_unsynced(EventQuery::default()).await?;
 
         if unsynced.is_empty() {
             return Ok(0);
@@ -90,7 +89,7 @@ impl SyncEngine {
 
         let pushed = synced_ids.len();
         if !synced_ids.is_empty() {
-            self.local.events.mark_synced(&synced_ids).await?;
+            syncable.mark_synced(&synced_ids).await?;
         }
 
         Ok(pushed)

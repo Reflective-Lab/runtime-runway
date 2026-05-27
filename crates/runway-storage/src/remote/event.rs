@@ -130,8 +130,6 @@ impl EventLog for FirestoreEventLog {
             }));
         }
 
-        // `unsynced_only` is ignored on remote — all remote events are synced by definition.
-
         // Build the `where` clause.
         let where_clause = match filters.len() {
             0 => None,
@@ -184,11 +182,6 @@ impl EventLog for FirestoreEventLog {
             }
         }
         Ok(events)
-    }
-
-    async fn mark_synced(&self, _event_ids: &[String]) -> Result<()> {
-        // No-op on remote — events are considered synced by definition
-        Ok(())
     }
 }
 

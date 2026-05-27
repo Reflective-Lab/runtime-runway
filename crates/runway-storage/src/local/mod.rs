@@ -35,12 +35,17 @@ impl LocalStorageKit {
         let object_base = base.join("objects");
         tokio::fs::create_dir_all(&object_base).await?;
 
+        let redb_log = Arc::new(event::RedbEventLog::new(db.clone()));
+        let events: Arc<dyn crate::traits::event::EventLog> = redb_log.clone();
+        let syncable: Arc<dyn crate::traits::event::SyncableEventLog> = redb_log;
+
         Ok(StorageKit {
             documents: Arc::new(document::RedbDocumentStore::new(db.clone())),
             vectors: Arc::new(vector::FileVectorStore::new(db.clone())),
             objects: Arc::new(object::LocalObjectStore::new(object_base)),
-            events: Arc::new(event::RedbEventLog::new(db.clone())),
+            events,
             embeddings: Arc::new(LocalEmbedder::new()),
+            syncable_events: Some(syncable),
         })
     }
 }

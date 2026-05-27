@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use runway_storage::StorageKit;
-use runway_storage_contract::{ContractContext, document, embedding, object, vector};
+use runway_storage_contract::{ContractContext, document, embedding, event, object, vector};
 
 async fn build_kit() -> (StorageKit, tempfile::TempDir) {
     let tmp = tempfile::tempdir().unwrap();
@@ -43,6 +43,26 @@ async fn vector_contract() {
 async fn object_contract() {
     let (kit, _tmp) = build_kit().await;
     object::run_object_suite(Arc::clone(&kit.objects), ctx())
+        .await
+        .assert_passed();
+}
+
+#[tokio::test]
+async fn event_contract() {
+    let (kit, _tmp) = build_kit().await;
+    event::run_event_suite(Arc::clone(&kit.events), ctx())
+        .await
+        .assert_passed();
+}
+
+#[tokio::test]
+async fn syncable_event_contract() {
+    let (kit, _tmp) = build_kit().await;
+    let syncable = kit
+        .syncable_events
+        .clone()
+        .expect("local backend must provide SyncableEventLog");
+    event::run_syncable_event_suite(syncable, ctx())
         .await
         .assert_passed();
 }

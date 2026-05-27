@@ -27,19 +27,29 @@ pub struct EventQuery {
     pub event_type: Option<String>,
     pub since: Option<DateTime<Utc>>,
     pub limit: Option<usize>,
-    /// Only return events not yet synced (local use for sync engine).
-    pub unsynced_only: bool,
 }
 
 /// Append-only event ledger. The ExperienceStore from the Converge architecture.
 ///
 /// Local impl:  redb (survives restarts, feeds sync engine)
 /// Remote impl: Firestore events subcollection + BigQuery streaming insert
+///
+/// Sync-engine-specific operations (`mark_synced`, querying for unsynced
+/// events) live on [`SyncableEventLog`], which only the local impl implements.
 #[async_trait]
 pub trait EventLog: Send + Sync {
     async fn append(&self, event: StoredEvent) -> Result<()>;
     async fn query(&self, q: EventQuery) -> Result<Vec<StoredEvent>>;
+}
 
-    /// Mark events as synced. Only meaningful in local implementations.
+/// Local-only extension of `EventLog` for the sync engine. Remote backends do
+/// not implement this; the type system enforces that mark_synced/query_unsynced
+/// cannot be called on a remote log.
+#[async_trait]
+pub trait SyncableEventLog: EventLog {
+    /// Return events matching `q` that have NOT yet been marked synced.
+    async fn query_unsynced(&self, q: EventQuery) -> Result<Vec<StoredEvent>>;
+
+    /// Mark events as synced.
     async fn mark_synced(&self, event_ids: &[String]) -> Result<()>;
 }

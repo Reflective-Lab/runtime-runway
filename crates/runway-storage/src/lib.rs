@@ -7,7 +7,7 @@ pub mod traits;
 pub use traits::{
     document::{Document, DocumentStore, Filter, Order, Query},
     embedding::{EMBEDDING_DIMS, Embedding, EmbeddingProvider},
-    event::{EventLog, StoredEvent},
+    event::{EventLog, EventQuery, StoredEvent, SyncableEventLog},
     object::ObjectStore,
     vector::{Match, VectorStore},
 };
@@ -27,6 +27,8 @@ pub struct StorageKit {
     pub objects: Arc<dyn ObjectStore>,
     pub events: Arc<dyn EventLog>,
     pub embeddings: Arc<dyn EmbeddingProvider>,
+    /// Local-only: present when running against the redb backend. None for remote.
+    pub syncable_events: Option<Arc<dyn SyncableEventLog>>,
 }
 
 impl StorageKit {
