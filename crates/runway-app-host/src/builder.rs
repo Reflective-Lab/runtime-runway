@@ -48,9 +48,9 @@ impl RunwayAppHostBuilder {
     }
 
     pub async fn build(self) -> Result<BuiltHost> {
-        let storage = self.storage.ok_or_else(|| {
-            anyhow::anyhow!("with_storage(...) must be called before build()")
-        })?;
+        let storage = self
+            .storage
+            .ok_or_else(|| anyhow::anyhow!("with_storage(...) must be called before build()"))?;
         let config = match self.config {
             Some(c) => c,
             None => HostConfig::from_env(&self.packet),

@@ -10,8 +10,8 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::realtime::{EventEnvelope, EventHubHandle};
 use crate::AppExecutionPacket;
+use crate::realtime::{EventEnvelope, EventHubHandle};
 
 #[derive(Clone)]
 pub struct ApprovalsState {
@@ -48,7 +48,12 @@ async fn approve(
 ) -> (StatusCode, Json<ApprovalReceipt>) {
     let env = build_envelope(&state, "approval.approved", &ref_id, body);
     state.realtime.publish(env.clone());
-    (StatusCode::ACCEPTED, Json(ApprovalReceipt { event_id: env.event_id }))
+    (
+        StatusCode::ACCEPTED,
+        Json(ApprovalReceipt {
+            event_id: env.event_id,
+        }),
+    )
 }
 
 async fn reject(
@@ -58,7 +63,12 @@ async fn reject(
 ) -> (StatusCode, Json<ApprovalReceipt>) {
     let env = build_envelope(&state, "approval.rejected", &ref_id, body);
     state.realtime.publish(env.clone());
-    (StatusCode::ACCEPTED, Json(ApprovalReceipt { event_id: env.event_id }))
+    (
+        StatusCode::ACCEPTED,
+        Json(ApprovalReceipt {
+            event_id: env.event_id,
+        }),
+    )
 }
 
 fn build_envelope(
@@ -93,11 +103,12 @@ mod tests {
     use tower::ServiceExt;
 
     fn test_state() -> ApprovalsState {
-        let packet = Arc::new(AppExecutionPacket::new(
-            "test", "Test", "test desc", "/",
-        ));
+        let packet = Arc::new(AppExecutionPacket::new("test", "Test", "test desc", "/"));
         let hub = EventHub::new();
-        ApprovalsState { packet, realtime: hub.handle() }
+        ApprovalsState {
+            packet,
+            realtime: hub.handle(),
+        }
     }
 
     #[tokio::test]
