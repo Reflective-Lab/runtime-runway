@@ -27,4 +27,5 @@ uuid = { workspace = true, features = ["v4", "serde"] }
 
 [dev-dependencies]
 reqwest = { workspace = true }
+tempfile = "3"
 tower = { workspace = true }
