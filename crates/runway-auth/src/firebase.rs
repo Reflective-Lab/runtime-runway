@@ -66,9 +66,13 @@ pub struct FirebaseAuth {
 
 impl FirebaseAuth {
     pub fn new(project_id: impl Into<String>) -> Self {
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .build()
+            .expect("no-proxy reqwest client should build");
         Self {
             project_id: project_id.into(),
-            client: reqwest::Client::new(),
+            client,
             cache: Arc::new(RwLock::new(None)),
         }
     }
