@@ -124,6 +124,22 @@ Four agents running in parallel, each adding one piece to the stack:
 
 ---
 
+## Boundary debt — relocate after canonical execution container lands
+
+Surfaced 2026-05-28 during the Runway/Helm app-host boundary work. The four-layer
+model (App / Helm / Runway / Movement) says Runway owns ops substrate and
+Movement owns commercial authority — but several crates currently sit on the
+wrong side of that line.
+
+- [ ] **`runway-accounts/` → `movement/commerce-rails/`** — six files import `stripe`
+      (`stripe.rs`, `domain.rs`, `store.rs`, `http/billing.rs`, `lib.rs`, `error.rs`,
+      `config.rs`). Plus `runway/crates/api-server/src/config.rs` carries Stripe
+      config. All Movement territory per spec `docs/superpowers/specs/2026-05-28-runway-helm-app-host-boundary-design.md` § 10.
+      Defer until the current execution-container boundary spec lands (Phases 3–10),
+      then plan the relocation as a follow-up spec.
+
+---
+
 ## Architecture decisions (locked)
 
 | Decision | Choice | Rationale |
