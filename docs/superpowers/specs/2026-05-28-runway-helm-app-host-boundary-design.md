@@ -64,6 +64,10 @@ This spec covers three interlocking workstreams that ship together:
 | `marquee-apps/catalyst-biz/` | Catalyst app | Yes — backend added |
 | `movement/commerce-rails/` | Commercial authority | No — referenced only |
 
+### Helm-side adoption
+
+Helm has its own boundary doc at `stack/bedrock-platform/helms/kb/Architecture/Runway Execution Container Boundary.md` covering the same decision from Helm's perspective — what Helm keeps owning vs. what migrates to Runway, with a practical-migration-rule table and a row-for-row "current application-server split" table that maps onto § 5.2 here. Treat both docs as authoritative; if they drift, this spec wins on host-side concerns and the Helm KB wins on operator-control semantics.
+
 ---
 
 ## 4. `runway-app-host` additions
