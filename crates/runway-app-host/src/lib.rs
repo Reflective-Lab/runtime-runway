@@ -95,6 +95,18 @@ impl AppExecutionPacket {
         self
     }
 
+    /// Register multiple operator packets in one call.
+    ///
+    /// Equivalent to chaining `.with_operator_packet(...)` for each item, but more ergonomic
+    /// for apps that declare portfolios of packets.
+    pub fn with_operator_packets<I>(mut self, regs: I) -> Self
+    where
+        I: IntoIterator<Item = OperatorPacketRegistration>,
+    {
+        self.operator_packets.extend(regs);
+        self
+    }
+
     pub fn with_subject_ref(mut self, subject_ref: SubjectRefRegistration) -> Self {
         self.subject_refs.push(subject_ref);
         self
@@ -160,6 +172,12 @@ pub enum RegistrationSource {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct OperatorPacketRegistration {
+    /// Identifier matching `JobReadinessPacket.job_key` on the Helm side.
+    ///
+    /// E.g. `"adaptive-inquiry"` (for Quorum), `"integration-candidate-readiness"` (for Atlas).
+    /// Convention: single-purpose key today (one packet kind per job). When a second
+    /// packet kind ships, introduce a typed `packet_kind: PacketKind` field rather than
+    /// encoding kind in this string.
     pub packet_key: String,
     pub receipt_family: String,
     pub authority_effect: AuthorityEffect,
@@ -175,9 +193,19 @@ impl OperatorPacketRegistration {
     }
 }
 
+/// How much authority a packet's receipts carry, declared by the app at deploy time.
+/// Runway expresses coarse INTENT here; Helm receipt-family telemetry stays richer.
+///
+/// Apps declare the *maximum* authority the packet can carry; a packet with mixed
+/// receipts declares its worst case. Detailed audit flows through Helm.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum AuthorityEffect {
+    /// Packet emits guidance that operators may act on, but no automatic side effects.
+    Advisory,
+    /// Packet emits effects that change downstream state when applied (e.g., DecisionApplication).
+    Binding,
+    /// Packet emits no binding effect — informational only.
     None,
 }
 
@@ -297,7 +325,7 @@ pub enum ContractLayer {
     Helm,
     Runway,
     App,
-    Movement,
+    CommerceRails,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -471,6 +499,42 @@ mod tests {
         assert!(matches!(routes[0].owner, RouteOwner::RunwayHost));
         assert!(matches!(routes[1].owner, RouteOwner::HelmModule));
         assert!(matches!(routes[2].owner, RouteOwner::AppDomain));
+    }
+
+    #[test]
+    fn authority_effect_serializes_advisory_and_binding() {
+        use AuthorityEffect::*;
+        for (variant, expected) in [
+            (None, "\"none\""),
+            (Advisory, "\"advisory\""),
+            (Binding, "\"binding\""),
+        ] {
+            assert_eq!(serde_json::to_string(&variant).unwrap(), expected);
+        }
+    }
+
+    #[test]
+    fn with_operator_packets_bulk_extends_in_order() {
+        let regs = vec![
+            OperatorPacketRegistration {
+                packet_key: "a".into(),
+                receipt_family: "fam-a".into(),
+                authority_effect: AuthorityEffect::None,
+            },
+            OperatorPacketRegistration {
+                packet_key: "b".into(),
+                receipt_family: "fam-b".into(),
+                authority_effect: AuthorityEffect::Advisory,
+            },
+        ];
+        let packet = AppExecutionPacket::new("app", "App", "desc", "/")
+            .with_operator_packets(regs);
+        assert_eq!(packet.operator_packets.len(), 2);
+        assert_eq!(packet.operator_packets[0].packet_key, "a");
+        assert_eq!(
+            packet.operator_packets[1].authority_effect,
+            AuthorityEffect::Advisory
+        );
     }
 
     #[test]
