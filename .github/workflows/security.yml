@@ -17,16 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout converge (sibling dependency)
-        uses: actions/checkout@v4
-        with:
-          repository: Reflective-Lab/converge
-          path: ../converge
       - name: Checkout commerce-rails (sibling dependency)
         uses: actions/checkout@v4
         with:
           repository: Reflective-Lab/commerce-rails
-          path: ../commerce-rails
+          path: _commerce-rails
+      - name: Place commerce-rails at runway's sibling path
+        run: mv _commerce-rails "$GITHUB_WORKSPACE/../commerce-rails"
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: "1.94.0"
