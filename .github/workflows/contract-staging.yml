@@ -38,6 +38,11 @@ jobs:
         with:
           repository: Reflective-Lab/converge
           path: ../converge
+      - name: Checkout commerce-rails (sibling dependency)
+        uses: actions/checkout@v4
+        with:
+          repository: Reflective-Lab/commerce-rails
+          path: ../commerce-rails
       - name: Install protoc
         run: |
           sudo apt-get update
