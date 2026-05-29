@@ -4,24 +4,23 @@ pub mod domain;
 pub mod error;
 mod http;
 pub mod store;
-pub mod stripe;
 
 pub use claims::ClaimsService;
 pub use config::AccountsConfig;
 pub use domain::{Account, Org, OrgInvite, OrgMember, Plan, Role};
 pub use error::AccountError;
 pub use store::AccountStore;
-pub use stripe::StripeClient;
 
 use std::sync::Arc;
 
 use axum::{Router, routing};
+use commerce_rails_stripe::CommerceRails;
 use runway_storage::StorageKit;
 
 #[derive(Clone)]
 pub struct AccountsState {
     pub store: AccountStore,
-    pub stripe: StripeClient,
+    pub commerce: CommerceRails,
     pub claims: ClaimsService,
     pub config: AccountsConfig,
 }
@@ -31,7 +30,7 @@ impl AccountsState {
         let client = reqwest::Client::new();
         Self {
             store: AccountStore::new(storage),
-            stripe: StripeClient::new(client.clone(), config.stripe_secret_key.clone()),
+            commerce: CommerceRails::new(client.clone(), config.commerce.clone()),
             claims: ClaimsService::new(client, config.local_dev),
             config,
         }

@@ -116,7 +116,7 @@ stack/atelier-showcase/
 
 ### Out-of-scope deletions (handled in Phase 6 cleanup)
 
-- 5 subscription/billing truth files in `application-server/src/truth_runtime/` (`activate_subscription`, `upgrade_subscription_plan`, `refill_prepaid_ai_credits`, `suspend_service_on_payment_failure`, `reconcile_model_usage_against_customer_ledger`) — **deleted entirely**; will be reimplemented in `movement/commerce-rails` under a future spec.
+- 5 subscription/billing truth files in `application-server/src/truth_runtime/` (`activate_subscription`, `upgrade_subscription_plan`, `refill_prepaid_ai_credits`, `suspend_service_on_payment_failure`, `reconcile_model_usage_against_customer_ledger`) — **deleted entirely**; will be reimplemented in `commerce-rails` under a future spec.
 
 ---
 
@@ -1166,7 +1166,7 @@ binary mounts them on top of `runway-app-host` to produce a runnable CRM demo.
 
 This repo is for examples, not platform infrastructure. Reusable patterns
 belong in Helm; ops/runtime belong in Runway; commercial concerns belong in
-Movement.
+Commerce Rails.
 ```
 
 Write `CLAUDE.md`:
@@ -1186,7 +1186,7 @@ Write `CLAUDE.md`:
 
 - Reusable Helm patterns — those go in `stack/bedrock-platform/helms/crates/`
 - Runway infrastructure — that goes in `reflective/runway/`
-- Commerce / billing — that goes in `reflective/movement/`
+- Commerce / billing — that goes in `reflective/commerce-rails/`
 
 ## Rules
 
@@ -1782,7 +1782,7 @@ This phase has nine sub-tasks (one per `crm-*` crate plus the truths). Each foll
 
 ### Task 6.0: Delete subscription/billing truth bodies
 
-The 5 subscription truth bodies don't move — they're deleted entirely (future Movement work).
+The 5 subscription truth bodies don't move — they're deleted entirely (future Commerce Rails work).
 
 - [ ] **Step 1: Confirm the targets**
 
@@ -1815,7 +1815,7 @@ Expected: PASS (these 5 truths are no longer dispatchable; that's fine because n
 
 ```bash
 git add stack/bedrock-platform/helms/crates/application-server
-git commit -m "chore(application-server): drop subscription/billing truths (moving to Movement)"
+git commit -m "chore(application-server): drop subscription/billing truths (moving to Commerce Rails)"
 ```
 
 ### Task 6.1–6.8: Each `crm-*` crate
@@ -1922,7 +1922,7 @@ cargo build -p crm-truths
 git add stack/atelier-showcase
 git commit -m "feat(crm-truths): move 4 CRM truth bodies from helms"
 git push -u origin HEAD
-gh pr create --title "feat(atelier-showcase): populate CRM modules from application-server" --body "Moves CRM services + 4 CRM truth bodies. Drops 5 subscription truths (future Movement work)."
+gh pr create --title "feat(atelier-showcase): populate CRM modules from application-server" --body "Moves CRM services + 4 CRM truth bodies. Drops 5 subscription truths (future Commerce Rails work)."
 ```
 
 ---
@@ -2589,7 +2589,7 @@ gh pr create --title "feat(ops): Cloud Run deploy for catalyst-backend" --body "
 | §7.3 Local proof flow | Task 8.3 |
 | §8 Cloud Run deploy | Phase 10 |
 | §9 Migration sequencing | Phases 1–10 map 1:1 to the 10 steps |
-| §10 Out of scope | Honored — no Movement code, no atelier-showcase cloud deploy, no marquee-apps onboarding |
+| §10 Out of scope | Honored — no Commerce Rails code, no atelier-showcase cloud deploy, no marquee-apps onboarding |
 | §11 Open questions | Resolved during implementation (timeline crate is footnote in Phase 5; gRPC port config in Task 1.9; HostContext ergonomics in Task 1.5) |
 
 ### Placeholder scan

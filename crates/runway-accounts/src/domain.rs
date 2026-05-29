@@ -20,14 +20,6 @@ impl Plan {
             Plan::Enterprise => "enterprise",
         }
     }
-
-    /// App IDs granted by this plan. Expanded as Marquee app subscriptions are wired up.
-    pub fn apps(&self) -> Vec<String> {
-        match self {
-            Plan::Free => vec![],
-            Plan::Starter | Plan::Team | Plan::Enterprise => vec!["marquee".to_string()],
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,7 +57,8 @@ pub struct Org {
     pub billing_owner_uid: String,
     pub plan: Plan,
     pub apps: Vec<String>,
-    pub stripe_customer_id: Option<String>,
+    #[serde(default)]
+    pub billing_customer_ref: Option<String>,
     pub subscription_status: String,
     pub subscription_id: Option<String>,
     pub current_period_end: Option<i64>,
@@ -83,7 +76,7 @@ impl Org {
             billing_owner_uid: uid,
             plan: Plan::Free,
             apps: vec![],
-            stripe_customer_id: None,
+            billing_customer_ref: None,
             subscription_status: "inactive".to_string(),
             subscription_id: None,
             current_period_end: None,

@@ -527,8 +527,7 @@ mod tests {
                 authority_effect: AuthorityEffect::Advisory,
             },
         ];
-        let packet = AppExecutionPacket::new("app", "App", "desc", "/")
-            .with_operator_packets(regs);
+        let packet = AppExecutionPacket::new("app", "App", "desc", "/").with_operator_packets(regs);
         assert_eq!(packet.operator_packets.len(), 2);
         assert_eq!(packet.operator_packets[0].packet_key, "a");
         assert_eq!(

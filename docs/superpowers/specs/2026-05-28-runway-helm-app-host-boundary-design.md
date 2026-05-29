@@ -38,7 +38,7 @@ This spec covers three interlocking workstreams that ship together:
 │                        helm-governed-jobs,               │
 │                        helm-truth-execution              │
 ├──────────────────────┬──────────────────────────────────┤
-│  Runway              │  Movement                         │
+│  Runway              │  Commerce Rails                   │
 │  Ops authority       │  Commercial authority             │
 │  telemetry, GCP,     │  subscriptions, billing,          │
 │  storage, auth,      │  entitlements, Stripe Connect     │
@@ -49,10 +49,10 @@ This spec covers three interlocking workstreams that ship together:
 
 ### Authority and dependency direction
 
-- **App** imports Runway + Helm modules. Eventually also imports Movement.
-- **Helm** imports Runway. Never imports apps, Movement, or other Helm modules unless explicitly reusing one.
+- **App** imports Runway + Helm modules. Eventually also imports Commerce Rails.
+- **Helm** imports Runway. Never imports apps, Commerce Rails, or other Helm modules unless explicitly reusing one.
 - **Runway** imports nothing above it. Never knows what app or what Helm module is running.
-- **Movement** is a peer authority to Runway. Out of scope for this spec — referenced only.
+- **Commerce Rails** is a peer authority to Runway. Out of scope for this spec — referenced only.
 
 ### Repository map
 
@@ -62,7 +62,7 @@ This spec covers three interlocking workstreams that ship together:
 | `stack/bedrock-platform/helms/` | Helm module crates | Yes — restructured |
 | `stack/atelier-showcase/` | Non-reusable showcase apps | Yes — bootstrapped |
 | `marquee-apps/catalyst-biz/` | Catalyst app | Yes — backend added |
-| `movement/commerce-rails/` | Commercial authority | No — referenced only |
+| `commerce-rails/` | Commercial authority | No — referenced only |
 
 ### Helm-side adoption
 
@@ -210,7 +210,7 @@ Each implements `HelmModule`. Each holds its own state. None reaches outside its
 | Approvals routes `/v1/approvals/{ref}/...` | Moved to `runway-app-host` | Transport is host concern |
 | CRM business services (Opportunities, Parties, Workflow, Conversations, Documents, Facts, Metadata, Workbench dashboard) | Moved to `stack/atelier-showcase` (see § 6) | Not reusable patterns |
 | CRM truth bodies (`score-inbound-fit`, `qualify-inbound-lead`, 17+ others) | Moved to `stack/atelier-showcase/crates/crm-truths` | Showcase content, not platform |
-| Subscriptions / billing routes | Deleted | Belongs in Movement (`commerce-rails`) — future spec |
+| Subscriptions / billing routes | Deleted | Belongs in Commerce Rails — future spec |
 
 ### 5.3 What stays Helm-internal
 
@@ -384,10 +384,10 @@ Each step is a separate PR. Steps 3–6 don't break the running Helm because `ap
 
 The following are acknowledged but deferred to follow-up specs:
 
-- **Movement integration.** `commerce-rails` Stripe webhook + entitlements wiring into `runway-auth` custom claims.
+- **Commerce Rails integration.** Stripe webhook + entitlements wiring into `runway-auth` custom claims.
 - **Atelier-showcase Cloud Run deploy.** Bootstrapping the workspace and proving it locally is in scope; cloud-deploying the CRM showcase is not.
 - **Other marquee apps** (Wolfgang, Inkling, Folio, Scout, Quorum, Vouch) onto runway-app-host.
-- **Movement-side billing routes** previously in `application-server`. They're deleted in step 9; reinstatement happens through Movement.
+- **Commerce Rails-side billing routes** previously in `application-server`. They're deleted in step 9; reinstatement happens through Commerce Rails.
 - **gRPC-side approvals or realtime.** gRPC support exists in the trait for module surfaces. Streaming events over gRPC (instead of SSE) is not added in this spec.
 - **WebSocket transport** mentioned in the proof doc — SSE is the only realtime transport in scope.
 

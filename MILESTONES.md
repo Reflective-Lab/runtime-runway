@@ -126,17 +126,18 @@ Four agents running in parallel, each adding one piece to the stack:
 
 ## Boundary debt — relocate after canonical execution container lands
 
-Surfaced 2026-05-28 during the Runway/Helm app-host boundary work. The four-layer
-model (App / Helm / Runway / Movement) says Runway owns ops substrate and
-Movement owns commercial authority — but several crates currently sit on the
+Surfaced 2026-05-28 during the Runway/Helm app-host boundary work. The layer
+model says Runway owns ops substrate and Commerce Rails owns commercial
+authority — but several crates currently sit on the
 wrong side of that line.
 
-- [ ] **`runway-accounts/` → `movement/commerce-rails/`** — six files import `stripe`
-      (`stripe.rs`, `domain.rs`, `store.rs`, `http/billing.rs`, `lib.rs`, `error.rs`,
-      `config.rs`). Plus `runway/crates/api-server/src/config.rs` carries Stripe
-      config. All Movement territory per spec `docs/superpowers/specs/2026-05-28-runway-helm-app-host-boundary-design.md` § 10.
-      Defer until the current execution-container boundary spec lands (Phases 3–10),
-      then plan the relocation as a follow-up spec.
+- [x] **`runway-accounts/` → `commerce-rails/`** — fixed 2026-05-28.
+      Stripe provider config, API calls, webhook signature mechanics, receipt
+      construction, and webhook event mapping now live in
+      `commerce-rails/crates/commerce-rails-stripe/`. Runway keeps the
+      intended HTTPS route and identity/org mirror plumbing, and calls the
+      Commerce Rails-owned adapter instead of carrying Stripe business logic inside
+      `runway-accounts`.
 
 ---
 

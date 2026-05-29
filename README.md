@@ -4,20 +4,20 @@ Distribution, deployment, and infrastructure for the [Converge](https://github.c
 
 Runway owns everything needed to **run, package, and deploy** Converge. The SDK stays pure; Runway handles the messy reality of binaries, containers, GPUs, and cloud services.
 
-## Relationship to Movement
+## Relationship to Commerce Rails
 
-Runway and [Movement](../movement/commerce-rails/) are sibling authorities with a clean boundary:
+Runway and [Commerce Rails](../commerce-rails/) are sibling authorities with a clean boundary:
 
 | Question | Owner |
 |---|---|
 | Who can log in? Where does code run? Where do secrets live? | **Runway** |
-| Who pays? What is owed? What is granted? What must be reconciled? | **Movement** |
+| Who pays? What is owed? What is granted? What must be reconciled? | **Commerce Rails** |
 
-Runway owns canonical users, orgs, auth, membership, deployments, secrets, and runtime substrate. Movement (Commerce Rails) owns subscriptions, entitlements, billing, revenue-share, payouts, and reconciliation.
+Runway owns canonical users, orgs, auth, membership, deployments, secrets, and runtime substrate. Commerce Rails owns subscriptions, entitlements, billing, revenue-share, payouts, and reconciliation.
 
-Stripe crosses both: Runway routes the webhook, holds the signing secret, and provides runtime observability. Movement verifies the provider semantics, records receipts, and decides commercial state.
+Stripe crosses both: Runway routes the webhook, holds the signing secret, and provides runtime observability. Commerce Rails verifies the provider semantics, records receipts, and decides commercial state.
 
-See [`kb/Architecture/Movement Boundary.md`](kb/Architecture/Movement%20Boundary.md) for the full authority table.
+See [`kb/Architecture/Commerce Rails Boundary.md`](kb/Architecture/Commerce%20Rails%20Boundary.md) for the full authority table.
 
 ---
 
@@ -35,7 +35,7 @@ reflective/runway/
     application/        The `converge` CLI/TUI binary
     llm/                Local LLM inference (Burn, llama.cpp)
     api-server/         Cloud Run reference binary (wires all runway-* crates)
-    runway-accounts/    Users, orgs, invites, roles, and Stripe billing
+    runway-accounts/    Users, orgs, invites, roles, and billing mirror
     runway-auth/        Firebase Auth middleware (Tower Layer, offline JWKS)
     runway-middleware/  Axum request-id, trace, CORS, compression stack
     runway-secrets/     GCP Secret Manager client (SecretString, zeroized)
@@ -140,7 +140,7 @@ When the Tauri app goes online, it re-embeds via VertexEmbedder to replace appro
 
 ### runway-accounts
 
-Users, organisations, team invites, roles, and Stripe billing — the canonical identity and membership layer.
+Users, organisations, team invites, roles, and the billing entitlement mirror — the canonical identity and membership layer. Stripe provider behavior lives in Commerce Rails.
 
 Routes (all under `runway_accounts::protected_routes()`, behind `AuthLayer`):
 
@@ -159,7 +159,7 @@ Routes (all under `runway_accounts::protected_routes()`, behind `AuthLayer`):
 
 The Stripe webhook (`/v1/billing/webhooks/stripe`) is public, HMAC-verified internally, and mounted via `runway_accounts::public_routes()`.
 
-**Runway owns identity and transport.** The commercial meaning of subscription events — what the org is entitled to, revenue-share, payout — belongs to [Movement](../movement/commerce-rails/).
+**Runway owns identity and transport.** The commercial meaning of subscription events — what the org is entitled to, revenue-share, payout — belongs to [Commerce Rails](../commerce-rails/).
 
 ### runway-auth
 

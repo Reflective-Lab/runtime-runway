@@ -3,6 +3,12 @@ source: llm
 ---
 # Changelog
 
+## 2026-05-28 — Stripe billing boundary moved to Commerce Rails
+
+- Removed the local Stripe client from `runway-accounts`.
+- Runway now keeps billing HTTP routes, auth context, and the org entitlement mirror, then calls the Commerce Rails-owned `commerce-rails-stripe` adapter for provider config, Stripe API calls, webhook signature mechanics, receipt construction, and event mapping.
+- `api-server` delegates commercial provider config to `CommerceRailsConfig` instead of carrying Stripe config fields directly.
+
 ## 2026-05-11 — api-server deployment spike
 
 Added `crates/api-server` — a minimal Cloud Run binary that wires all five runway-* crates together and proves the deployment path end-to-end:
