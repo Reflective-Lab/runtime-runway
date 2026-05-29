@@ -7,6 +7,7 @@ use crate::{
     remote::GcpToken,
     traits::{
         Error, Result,
+        embedding::Embedding,
         vector::{Match, VectorStore},
     },
 };
@@ -50,7 +51,7 @@ impl VectorStore for VertexVectorStore {
         &self,
         _namespace: &str,
         id: &str,
-        embedding: &[f32],
+        embedding: &Embedding,
         _text: Option<&str>,
         _metadata: HashMap<String, Value>,
     ) -> Result<()> {
@@ -62,7 +63,7 @@ impl VectorStore for VertexVectorStore {
         let body = serde_json::json!({
             "datapoints": [{
                 "datapointId": id,
-                "featureVector": embedding
+                "featureVector": embedding.as_slice()
             }]
         });
         self.client
@@ -77,7 +78,12 @@ impl VectorStore for VertexVectorStore {
         Ok(())
     }
 
-    async fn search(&self, _namespace: &str, query: &[f32], top_k: usize) -> Result<Vec<Match>> {
+    async fn search(
+        &self,
+        _namespace: &str,
+        query: &Embedding,
+        top_k: usize,
+    ) -> Result<Vec<Match>> {
         let url = format!(
             "{}/indexEndpoints/{}:findNeighbors",
             crate::endpoints::vertex_aiplatform(&self.region, &self.project_id),
@@ -86,7 +92,7 @@ impl VectorStore for VertexVectorStore {
         let body = serde_json::json!({
             "deployedIndexId": self.deployed_index_id,
             "queries": [{
-                "datapoint": { "featureVector": query },
+                "datapoint": { "featureVector": query.as_slice() },
                 "neighborCount": top_k
             }]
         });

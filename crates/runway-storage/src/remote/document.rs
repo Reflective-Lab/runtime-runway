@@ -63,6 +63,17 @@ impl FirestoreDocumentStore {
 #[async_trait]
 impl DocumentStore for FirestoreDocumentStore {
     async fn put(&self, collection: &str, doc: Document) -> Result<()> {
+        // Read-before-write: preserve created_at from the existing document if
+        // one is present.  For the Firestore backend this contract is also
+        // satisfied natively (createTime never changes), but we make the intent
+        // explicit here and stamp updated_at ourselves so callers never need to
+        // do timestamp math.
+        let mut doc = doc;
+        if let Some(existing) = self.get(collection, &doc.id).await? {
+            doc.created_at = existing.created_at;
+        }
+        doc.updated_at = Utc::now();
+
         let url = format!("{}/{}/{}", self.base_url(), collection, doc.id);
         let body = Self::to_firestore_fields(&doc.data);
         self.client

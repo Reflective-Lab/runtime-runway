@@ -10,6 +10,7 @@ members = [
     "crates/runway-middleware",
     "crates/runway-secrets",
     "crates/runway-storage",
+    "crates/runway-storage-contract",
     "crates/runway-telemetry",
 ]
 
@@ -43,6 +44,7 @@ converge-storage = { git = "https://github.com/Reflective-Lab/converge", tag = "
 # Internal
 converge-llm = { path = "crates/llm" }
 converge-application = { path = "crates/application" }
+commerce-rails-stripe = { path = "../commerce-rails/crates/commerce-rails-stripe" }
 runway-accounts = { path = "crates/runway-accounts" }
 runway-app-host = { path = "crates/runway-app-host" }
 runway-auth = { path = "crates/runway-auth" }

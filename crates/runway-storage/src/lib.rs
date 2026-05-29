@@ -6,8 +6,8 @@ pub mod traits;
 
 pub use traits::{
     document::{Document, DocumentStore, Filter, Order, Query},
-    embedding::EmbeddingProvider,
-    event::{EventLog, StoredEvent},
+    embedding::{EMBEDDING_DIMS, Embedding, EmbeddingProvider},
+    event::{EventLog, EventQuery, StoredEvent, SyncableEventLog},
     object::ObjectStore,
     vector::{Match, VectorStore},
 };
@@ -27,10 +27,12 @@ pub struct StorageKit {
     pub objects: Arc<dyn ObjectStore>,
     pub events: Arc<dyn EventLog>,
     pub embeddings: Arc<dyn EmbeddingProvider>,
+    /// Local-only: present when running against the redb backend. None for remote.
+    pub syncable_events: Option<Arc<dyn SyncableEventLog>>,
 }
 
 impl StorageKit {
-    /// Local storage for Tauri desktop apps. Uses SQLite + LanceDB + local FS.
+    /// Local storage for Tauri desktop apps. Uses redb (documents, vectors, events) + local FS (objects) + fastembed (embeddings).
     /// `base` is the root directory (e.g. `~/.inkling` or `~/.wolfgang`).
     pub async fn local(base: impl AsRef<Path>) -> Result<Self> {
         local::LocalStorageKit::build(base.as_ref()).await

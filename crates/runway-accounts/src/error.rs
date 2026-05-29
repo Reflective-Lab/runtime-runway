@@ -11,8 +11,8 @@ pub enum AccountError {
     NotFound,
     #[error("forbidden")]
     Forbidden,
-    #[error("stripe error: {0}")]
-    Stripe(String),
+    #[error("commerce error: {0}")]
+    Commerce(String),
     #[error("storage error: {0}")]
     Storage(String),
     #[error("internal: {0}")]
@@ -24,7 +24,7 @@ impl IntoResponse for AccountError {
         let status = match &self {
             AccountError::NotFound => StatusCode::NOT_FOUND,
             AccountError::Forbidden => StatusCode::FORBIDDEN,
-            AccountError::Stripe(_) => StatusCode::BAD_GATEWAY,
+            AccountError::Commerce(_) => StatusCode::BAD_GATEWAY,
             AccountError::Storage(_) | AccountError::Internal(_) => {
                 StatusCode::INTERNAL_SERVER_ERROR
             }
@@ -36,5 +36,11 @@ impl IntoResponse for AccountError {
 impl From<anyhow::Error> for AccountError {
     fn from(e: anyhow::Error) -> Self {
         AccountError::Internal(e.to_string())
+    }
+}
+
+impl From<commerce_rails_stripe::CommerceRailsError> for AccountError {
+    fn from(e: commerce_rails_stripe::CommerceRailsError) -> Self {
+        AccountError::Commerce(e.to_string())
     }
 }

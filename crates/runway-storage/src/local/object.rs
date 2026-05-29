@@ -55,9 +55,11 @@ impl ObjectStore for LocalObjectStore {
 
     async fn delete(&self, key: &str) -> Result<()> {
         let path = self.resolve(key);
-        tokio::fs::remove_file(&path)
-            .await
-            .map_err(|e| Error::Other(e.to_string()))
+        match tokio::fs::remove_file(&path).await {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(Error::Other(e.to_string())),
+        }
     }
 
     async fn exists(&self, key: &str) -> Result<bool> {

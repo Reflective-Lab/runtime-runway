@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 
-use crate::{StorageKit, embedding::vertex::VertexEmbedder};
+use crate::{EmbeddingProvider, StorageKit, embedding::vertex::VertexEmbedder};
 
 #[derive(Clone)]
 pub struct RemoteConfig {
@@ -41,8 +41,28 @@ impl RemoteConfig {
 pub struct RemoteStorageKit;
 
 impl RemoteStorageKit {
+    /// Default constructor — uses the Vertex AI embedder.
     pub async fn build(config: RemoteConfig) -> Result<StorageKit> {
+        Self::build_with_embedder(config, None).await
+    }
+
+    /// Constructor with an optional embedding-provider override. Used by the
+    /// contract emulator entry point to inject fastembed since there is no
+    /// Vertex AI emulator.
+    pub async fn build_with_embedder(
+        config: RemoteConfig,
+        embedder_override: Option<Arc<dyn EmbeddingProvider>>,
+    ) -> Result<StorageKit> {
         let token = GcpToken::new(config.token_source.clone());
+
+        let embeddings: Arc<dyn EmbeddingProvider> = match embedder_override {
+            Some(e) => e,
+            None => Arc::new(VertexEmbedder::new(
+                config.project_id.clone(),
+                config.region.clone(),
+                token.clone(),
+            )),
+        };
 
         Ok(StorageKit {
             documents: Arc::new(document::FirestoreDocumentStore::new(
@@ -62,11 +82,8 @@ impl RemoteStorageKit {
                 config.project_id.clone(),
                 token.clone(),
             )),
-            embeddings: Arc::new(VertexEmbedder::new(
-                config.project_id.clone(),
-                config.region.clone(),
-                token,
-            )),
+            embeddings,
+            syncable_events: None,
         })
     }
 }

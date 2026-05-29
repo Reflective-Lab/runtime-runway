@@ -19,7 +19,7 @@ converge-application     → converge-core, converge-experience,    CLI/TUI dist
                            converge-provider + optional subsystems
 converge-llm             → converge-core, converge-domain          Local LLM inference (Burn)
 
-runway-accounts          → runway-{auth,storage}, reqwest, hmac    Account + org + Stripe billing
+runway-accounts          → runway-{auth,storage}, Commerce Rails   Account + org + billing mirror
 runway-storage           → redb, reqwest, fastembed, serde_json    StorageKit: DocumentStore +
                                                                     VectorStore + ObjectStore +
                                                                     EventLog + EmbeddingProvider
@@ -43,7 +43,9 @@ reflective/runway/crates/runway-*     ──→  (no converge dependency)
 
 ### runway-accounts
 
-User, organisation, and Stripe billing management. Exposed as two router bundles:
+User, organisation, and billing mirror management. Stripe provider behavior lives
+in Commerce Rails; Runway keeps the HTTP route and identity-side mirror.
+Exposed as two router bundles:
 
 ```rust
 runway_accounts::public_routes(state)     // POST /v1/billing/webhooks/stripe (HMAC-verified)

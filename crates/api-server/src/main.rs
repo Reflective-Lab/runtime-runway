@@ -113,7 +113,6 @@ async fn list_events(
         app_id: params.app_id,
         event_type: params.event_type,
         limit: params.limit,
-        unsynced_only: false,
         ..Default::default()
     };
 

@@ -1,6 +1,6 @@
 [package]
 name = "runway-storage"
-description = "Shared storage abstraction for Runway apps — local (SQLite + LanceDB) and remote (Firestore + GCS + Vertex AI)"
+description = "Shared storage abstraction for Runway apps — local (redb + local FS + fastembed) and remote (Firestore + GCS + Vertex AI)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -24,6 +24,10 @@ tracing = { workspace = true }
 urlencoding = "2"
 uuid = { workspace = true }
 zeroize = { workspace = true }
+
+[dev-dependencies]
+runway-storage-contract = { path = "../runway-storage-contract" }
+tempfile = "3"
 
 [features]
 default = ["local", "remote"]

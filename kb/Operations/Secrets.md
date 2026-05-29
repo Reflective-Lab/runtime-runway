@@ -22,7 +22,7 @@ As runway matures, Firebase Functions in `converge-369ad` will be replaced by ru
 
 Environment variables are set at Cloud Run deploy time via `cloudbuild.api-server.yaml` and the `just api-deploy` recipe. See [[Building/Deployment]] for the full variable table.
 
-Sensitive values (`FIREBASE_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) are stored as Cloud Run environment variable secrets — set via Console or:
+Sensitive values (`FIREBASE_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) are stored as Cloud Run environment variable secrets. Runway supplies them as runtime config; Commerce Rails owns the Stripe adapter semantics. Set via Console or:
 
 ```bash
 gcloud run services update api-server \
@@ -33,7 +33,7 @@ gcloud run services update api-server \
 
 ### Stripe webhook secret
 
-`STRIPE_WEBHOOK_SECRET` — the signing secret for `runway-accounts` Stripe webhook HMAC verification. Obtained from the Stripe Dashboard → Webhooks → endpoint → "Signing secret".
+`STRIPE_WEBHOOK_SECRET` — the signing secret for the Commerce Rails Stripe adapter behind the Runway webhook route. Obtained from the Stripe Dashboard → Webhooks → endpoint → "Signing secret".
 
 If you roll the Stripe webhook secret:
 1. Copy the new signing secret from Stripe Dashboard

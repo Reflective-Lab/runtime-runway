@@ -314,8 +314,39 @@ tf-destroy env="staging":
 
 # Deploy Firebase Firestore rules, indexes, and Storage rules
 firebase-deploy:
-    cd ops/infra/firebase && firebase deploy --only firestore:rules,firestore:indexes,storage
+	cd ops/infra/firebase && firebase deploy --only firestore:rules,firestore:indexes,storage
 
 # One-time GCP project bootstrap (billing, APIs, TF state bucket, Firebase)
 gcp-setup:
-    ops/scripts/gcp-setup.sh
+	ops/scripts/gcp-setup.sh
+
+# ── Contract Tests ─────────────────────────────────────────────────────
+
+# Run local + emulator contract suites (default for `just contract`)
+contract: contract-local contract-emulator
+
+# Run contract suite against the local (redb + FS + fastembed) backend
+contract-local:
+	cargo test -p runway-storage --test contract_local -- --nocapture
+
+# Run contract suite against the Firestore/GCS/Pub-Sub emulators with fastembed
+contract-emulator:
+	docker compose -f crates/runway-storage/tests/docker-compose.contract.yml up -d --wait
+	-FIRESTORE_EMULATOR_HOST=localhost:8080 \
+	 PUBSUB_EMULATOR_HOST=localhost:8085 \
+	 STORAGE_EMULATOR_HOST=http://localhost:4443 \
+	   cargo test -p runway-storage --test contract_emulator -- --nocapture
+	docker compose -f crates/runway-storage/tests/docker-compose.contract.yml down
+
+# Run contract suite against real staging GCP.
+# Requires: RUNWAY_CONTRACT_PROJECT, RUNWAY_CONTRACT_REGION, RUNWAY_CONTRACT_BUCKET, RUNWAY_CONTRACT_TOKEN.
+# RUNWAY_CONTRACT_TOKEN locally: `export RUNWAY_CONTRACT_TOKEN=$(gcloud auth print-access-token)`.
+contract-staging:
+	@test -n "$RUNWAY_CONTRACT_PROJECT" || (echo "set RUNWAY_CONTRACT_PROJECT" && exit 1)
+	@test -n "$RUNWAY_CONTRACT_REGION" || (echo "set RUNWAY_CONTRACT_REGION (e.g. us-central1)" && exit 1)
+	@test -n "$RUNWAY_CONTRACT_BUCKET" || (echo "set RUNWAY_CONTRACT_BUCKET" && exit 1)
+	@test -n "$RUNWAY_CONTRACT_TOKEN" || (echo "set RUNWAY_CONTRACT_TOKEN (try: gcloud auth print-access-token)" && exit 1)
+	cargo test -p runway-storage --test contract_real_gcp -- --ignored --nocapture
+
+# Run all three (local + emulator + real GCP)
+contract-all: contract contract-staging

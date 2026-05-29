@@ -94,15 +94,13 @@ expected       = HMAC-SHA256(STRIPE_WEBHOOK_SECRET, signed_payload)
 - Timestamp checked: must be within 5 minutes of server clock (replay protection)
 - Comparison: constant-time byte-by-byte XOR fold (no early exit)
 
-**Critical:** if `STRIPE_WEBHOOK_SECRET` is empty or unset, signature verification is skipped entirely. A startup assertion must guard this in production:
+Commerce Rails owns the Stripe adapter code that performs signature mechanics,
+provider receipt construction, and event mapping. Runway owns the public route
+and passes the raw signed payload to that Commerce Rails-owned adapter.
 
-```rust
-// TODO: add to main() for non-dev environments
-assert!(
-    local_dev || std::env::var("STRIPE_WEBHOOK_SECRET").map(|v| !v.is_empty()).unwrap_or(false),
-    "STRIPE_WEBHOOK_SECRET must be set in production"
-);
-```
+**Critical:** if `STRIPE_WEBHOOK_SECRET` is empty or unset, signature
+verification is skipped in local development only. Commerce Rails config rejects
+empty required Stripe provider variables when `LOCAL_DEV` is not set.
 
 ---
 
@@ -114,7 +112,7 @@ Once a token is verified, `AuthContext` is injected as an Axum `Extension`. Hand
 |---------|-------|
 | `GET /v1/orgs/:org_id` | `org.billing_owner_uid == ctx.uid()` OR `ctx.org_id() == org_id` |
 | `POST /v1/billing/checkout` | Authenticated user only (no plan check — any user can start checkout) |
-| `POST /v1/billing/portal` | Org must have a `stripe_customer_id` (i.e. prior checkout completed) |
+| `POST /v1/billing/portal` | Org must have a `billing_customer_ref` (i.e. prior checkout completed) |
 | `GET /api/events` | `org_id` scoped to claim or query param |
 
 **Not yet enforced:**
@@ -165,10 +163,10 @@ Configured in `runway-middleware::stack` via `ALLOWED_ORIGINS` (comma-separated)
 | Var | Purpose | Required in prod |
 |-----|---------|-----------------|
 | `FIREBASE_PROJECT_ID` | JWKS iss/aud validation | Yes |
-| `STRIPE_SECRET_KEY` | Stripe API access | Yes |
-| `STRIPE_WEBHOOK_SECRET` | Webhook HMAC verification | Yes — startup assertion fails if empty |
-| `STRIPE_PRICE_STARTER_MONTHLY` | Plan mapping in webhook handler | Yes |
-| `STRIPE_PRICE_TEAM_MONTHLY` | Plan mapping in webhook handler | Yes |
+| `STRIPE_SECRET_KEY` | Commerce Rails Stripe API access | Yes |
+| `STRIPE_WEBHOOK_SECRET` | Commerce Rails webhook HMAC verification | Yes — config fails if empty |
+| `STRIPE_PRICE_STARTER_MONTHLY` | Commerce Rails provider price mapping | Yes |
+| `STRIPE_PRICE_TEAM_MONTHLY` | Commerce Rails provider price mapping | Yes |
 | `ALLOWED_ORIGINS` | CORS allowed origins | Yes — startup assertion fails if empty |
 | `LOCAL_DEV` | Dev bypass (never in prod) | Must be absent or false |
 
@@ -178,7 +176,7 @@ Configured in `runway-middleware::stack` via `ALLOWED_ORIGINS` (comma-separated)
 
 1. ~~**Offline JWT verification**~~ ✅ Done — RS256 + JWKS cache in `runway-auth/src/firebase.rs`
 2. ~~**Lock `ALLOWED_ORIGINS`**~~ ✅ Done — startup assertion in `api-server/src/main.rs`
-3. ~~**Guard `STRIPE_WEBHOOK_SECRET`**~~ ✅ Done — startup assertion in `api-server/src/main.rs`
+3. ~~**Guard `STRIPE_WEBHOOK_SECRET`**~~ ✅ Done — Commerce Rails config fails in production when empty
 4. ~~**Role enforcement**~~ ✅ Done — `role` minted into claims on provision and invite accept; `ctx.is_admin()` guards billing portal, invite management, and member management routes.
 
 See also: [[Architecture/Crate Map]], [[Architecture/Application]], [[Building/Deployment]]

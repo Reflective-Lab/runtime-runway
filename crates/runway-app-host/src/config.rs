@@ -18,6 +18,21 @@ pub struct HostConfig {
     pub port: u16,
 }
 
+impl Default for HostConfig {
+    /// Minimal test-friendly default: local-dev mode, ephemeral storage,
+    /// no route prefix, no CORS restriction, port 0 (OS assigns a free port).
+    fn default() -> Self {
+        Self {
+            local_dev: true,
+            storage_path: String::new(),
+            firebase_project_id: String::new(),
+            route_prefix: None,
+            allowed_origins: String::new(),
+            port: 0,
+        }
+    }
+}
+
 impl HostConfig {
     /// Read from process environment, falling back to packet-supplied
     /// defaults where applicable.

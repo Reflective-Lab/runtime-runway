@@ -67,11 +67,14 @@ impl AccountStore {
             .map_err(|e| anyhow::anyhow!("{e}"))
     }
 
-    pub async fn find_org_by_stripe_customer(&self, customer_id: &str) -> Result<Option<Org>> {
+    pub async fn find_org_by_billing_customer_ref(
+        &self,
+        customer_ref: &str,
+    ) -> Result<Option<Org>> {
         let q = Query::new()
             .filter(Filter::Eq(
-                "stripe_customer_id".into(),
-                Value::String(customer_id.to_string()),
+                "billing_customer_ref".into(),
+                Value::String(customer_ref.to_string()),
             ))
             .limit(1);
         let docs = self

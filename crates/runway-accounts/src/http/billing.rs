@@ -4,22 +4,25 @@ use axum::{
     extract::State,
     http::{HeaderMap, StatusCode},
 };
+use commerce_rails_stripe::{
+    BillingPlan as CommerceBillingPlan, CommerceWebhookAction, SubscriptionProjection,
+};
 use runway_auth::AuthContext;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::{
-    Account, AccountsConfig, AccountsState,
-    domain::{Org, Plan},
+    Account, AccountsState,
+    domain::{Org, Plan, Role},
     error::AccountError,
-    stripe::StripeSubscription,
 };
 
 // --- Request / response types ---
 
 #[derive(Debug, Deserialize)]
 pub struct CheckoutRequest {
-    pub price_id: String,
+    #[serde(alias = "price_id")]
+    pub price_ref: String,
     pub success_url: Option<String>,
     pub cancel_url: Option<String>,
 }
@@ -36,7 +39,7 @@ pub struct BillingSummary {
     pub subscription_status: String,
     pub current_period_end: Option<i64>,
     pub apps: Vec<String>,
-    pub stripe_configured: bool,
+    pub commerce_configured: bool,
 }
 
 // --- Handlers ---
@@ -47,27 +50,27 @@ pub async fn billing_summary(
     Extension(ctx): Extension<AuthContext>,
 ) -> Result<Json<BillingSummary>, AccountError> {
     let account = state.store.get_account(ctx.uid()).await?;
-    let org = match account.and_then(|a| a.org_id) {
+    let org = match account.and_then(|account| account.org_id) {
         Some(id) => state.store.get_org(&id).await?,
         None => None,
     };
 
     Ok(Json(match org {
-        Some(o) => BillingSummary {
-            org_id: Some(o.org_id),
-            plan: o.plan.as_str().to_string(),
-            subscription_status: o.subscription_status,
-            current_period_end: o.current_period_end,
-            apps: o.apps,
-            stripe_configured: state.stripe.is_configured(),
+        Some(org) => BillingSummary {
+            org_id: Some(org.org_id),
+            plan: org.plan.as_str().to_string(),
+            subscription_status: org.subscription_status,
+            current_period_end: org.current_period_end,
+            apps: org.apps,
+            commerce_configured: state.commerce.is_billing_configured(),
         },
         None => BillingSummary {
             org_id: None,
             plan: Plan::Free.as_str().to_string(),
             subscription_status: "inactive".to_string(),
             current_period_end: None,
-            apps: vec![],
-            stripe_configured: state.stripe.is_configured(),
+            apps: Vec::new(),
+            commerce_configured: state.commerce.is_billing_configured(),
         },
     }))
 }
@@ -82,19 +85,20 @@ pub async fn create_checkout(
         .store
         .get_account(ctx.uid())
         .await?
-        .ok_or_else(|| AccountError::Internal("account not provisioned".into()))?;
+        .ok_or_else(|| AccountError::Internal("account not provisioned".to_string()))?;
 
-    let customer_id = state
-        .stripe
+    let customer_ref = state
+        .commerce
         .ensure_customer(ctx.uid(), ctx.claims.email.as_deref())
         .await?;
 
-    // Store customer ID on the org so webhooks can look it up.
+    // Store the provider customer reference on the Runway org mirror so webhook
+    // ingress can resolve the identity container without calling Commerce Rails.
     if let Some(org_id) = &account.org_id
         && let Ok(Some(mut org)) = state.store.get_org(org_id).await
-        && org.stripe_customer_id.as_deref() != Some(&customer_id)
+        && org.billing_customer_ref.as_deref() != Some(&customer_ref)
     {
-        org.stripe_customer_id = Some(customer_id.clone());
+        org.billing_customer_ref = Some(customer_ref.clone());
         org.touch();
         let _ = state.store.upsert_org(&org).await;
     }
@@ -108,11 +112,10 @@ pub async fn create_checkout(
         .unwrap_or_else(|| format!("{app_url}?checkout=canceled"));
 
     let url = state
-        .stripe
+        .commerce
         .create_checkout_session(
-            &customer_id,
-            &req.price_id,
-            "subscription",
+            &customer_ref,
+            &req.price_ref,
             &success_url,
             &cancel_url,
             ctx.uid(),
@@ -136,18 +139,18 @@ pub async fn create_portal(
         .store
         .get_account(ctx.uid())
         .await?
-        .ok_or_else(|| AccountError::Internal("account not provisioned".into()))?;
+        .ok_or_else(|| AccountError::Internal("account not provisioned".to_string()))?;
 
-    let customer_id = match account.org_id.as_ref() {
+    let customer_ref = match account.org_id.as_ref() {
         Some(org_id) => state
             .store
             .get_org(org_id)
             .await?
-            .and_then(|o| o.stripe_customer_id),
+            .and_then(|org| org.billing_customer_ref),
         None => None,
     }
     .ok_or_else(|| {
-        AccountError::Stripe("no billing account found — complete a checkout first".into())
+        AccountError::Commerce("no billing account found - complete a checkout first".to_string())
     })?;
 
     let app_url = &state.config.app_url;
@@ -156,59 +159,70 @@ pub async fn create_portal(
         .unwrap_or_else(|| format!("{app_url}?portal=returned"));
 
     let url = state
-        .stripe
-        .create_portal_session(&customer_id, &return_url)
+        .commerce
+        .create_portal_session(&customer_ref, &return_url)
         .await?;
 
     Ok(Json(json!({ "portal_url": url })))
 }
 
-/// POST /v1/billing/webhooks/stripe  (public — HMAC-verified internally)
+/// POST /v1/billing/webhooks/stripe  (public; signed provider transport)
 pub async fn stripe_webhook(
     State(state): State<AccountsState>,
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let webhook_secret = &state.config.stripe_webhook_secret;
+    let signature = headers
+        .get("stripe-signature")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
 
-    if !webhook_secret.is_empty() {
-        let sig = headers
-            .get("stripe-signature")
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or("");
-        if !state.stripe.verify_signature(&body, sig, webhook_secret) {
-            tracing::warn!("Stripe webhook signature invalid");
-            return Err((
-                StatusCode::UNAUTHORIZED,
-                Json(json!({ "error": "invalid signature" })),
-            ));
-        }
+    if !state
+        .commerce
+        .verify_stripe_webhook_signature(&body, signature)
+    {
+        tracing::warn!("Stripe webhook signature invalid");
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({ "error": "invalid signature" })),
+        ));
     }
 
-    let event: Value = serde_json::from_slice(&body).map_err(|e| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(json!({ "error": format!("invalid JSON: {e}") })),
-        )
+    let webhook = state.commerce.accept_stripe_webhook(&body).map_err(|e| {
+        let status = if e.is_invalid_webhook_json() {
+            StatusCode::BAD_REQUEST
+        } else {
+            StatusCode::BAD_GATEWAY
+        };
+        (status, Json(json!({ "error": e.to_string() })))
     })?;
 
-    let event_type = event["type"].as_str().unwrap_or("");
-    tracing::info!(event_type, "Stripe webhook received");
+    tracing::info!(
+        event_type = webhook.event_type.as_str(),
+        receipt_id = webhook.receipt.id.as_str(),
+        "Stripe webhook accepted by Commerce Rails"
+    );
 
-    match event_type {
-        "checkout.session.completed" => {
-            handle_checkout_completed(&state, &event).await;
+    match webhook.action {
+        CommerceWebhookAction::LinkCustomerRef {
+            firebase_uid,
+            customer_ref,
+        } => {
+            handle_customer_ref_linked(&state, &firebase_uid, &customer_ref).await;
         }
-        "customer.subscription.created" | "customer.subscription.updated" => {
-            handle_subscription_updated(&state, &event["data"]["object"]).await;
+        CommerceWebhookAction::ApplySubscriptionProjection {
+            customer_ref,
+            projection,
+        } => {
+            handle_subscription_projection(&state, &customer_ref, projection).await;
         }
-        "customer.subscription.deleted" => {
-            handle_subscription_deleted(&state, &event["data"]["object"]).await;
+        CommerceWebhookAction::UpdateSubscriptionStatus {
+            customer_ref,
+            subscription_status,
+        } => {
+            handle_subscription_status(&state, &customer_ref, &subscription_status).await;
         }
-        "invoice.payment_failed" => {
-            handle_payment_failed(&state, &event["data"]["object"]).await;
-        }
-        _ => {}
+        CommerceWebhookAction::Ignored => {}
     }
 
     Ok(Json(json!({ "received": true })))
@@ -216,203 +230,145 @@ pub async fn stripe_webhook(
 
 // --- Webhook event handlers ---
 
-async fn handle_checkout_completed(state: &AccountsState, event: &Value) {
-    let session = &event["data"]["object"];
-    let Some(uid) = session["client_reference_id"].as_str() else {
-        tracing::warn!("checkout.session.completed missing client_reference_id");
-        return;
-    };
-    let Some(customer_id) = session["customer"].as_str() else {
-        return;
-    };
-
-    let org = match resolve_or_create_org(state, uid, customer_id).await {
-        Ok(o) => o,
+async fn handle_customer_ref_linked(state: &AccountsState, uid: &str, customer_ref: &str) {
+    let org = match resolve_or_create_org(state, uid, customer_ref).await {
+        Ok(org) => org,
         Err(e) => {
             tracing::error!(uid, "checkout: failed to resolve org: {e}");
             return;
         }
     };
 
-    // The subscription will arrive in a follow-up subscription.created event — no plan update here.
+    // The subscription will arrive in a follow-up subscription event; no plan update here.
     tracing::info!(
         uid,
-        org_id = org.org_id,
-        customer_id,
-        "checkout completed, org linked"
+        org_id = org.org_id.as_str(),
+        customer_ref,
+        "checkout completed, org mirror linked"
     );
 }
 
-async fn handle_subscription_updated(state: &AccountsState, subscription: &Value) {
-    let Some(customer_id) = subscription["customer"].as_str() else {
-        return;
-    };
-    let Some(sub_id) = subscription["id"].as_str() else {
-        return;
-    };
-    let status = subscription["status"].as_str().unwrap_or("unknown");
-    let period_end = subscription["current_period_end"].as_i64();
-
-    let price_ids: Vec<&str> = subscription["items"]["data"]
-        .as_array()
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(|item| item["price"]["id"].as_str())
-                .collect()
-        })
-        .unwrap_or_default();
-
-    let plan = plan_from_price_ids(&price_ids, &state.config);
-
-    let Some(mut org) = find_org_by_customer(state, customer_id).await else {
-        tracing::warn!(customer_id, "subscription update: org not found");
+async fn handle_subscription_projection(
+    state: &AccountsState,
+    customer_ref: &str,
+    projection: SubscriptionProjection,
+) {
+    let Some(mut org) = find_org_by_customer(state, customer_ref).await else {
+        tracing::warn!(customer_ref, "subscription update: org not found");
         return;
     };
 
-    org.plan = plan;
-    org.apps = org.plan.apps();
-    org.subscription_status = status.to_string();
-    org.subscription_id = Some(sub_id.to_string());
-    org.current_period_end = period_end;
-    org.touch();
+    apply_subscription_projection(&mut org, projection);
 
     if let Err(e) = state.store.upsert_org(&org).await {
         tracing::error!(
-            org_id = org.org_id,
+            org_id = org.org_id.as_str(),
             "subscription update: failed to save org: {e}"
         );
         return;
     }
 
-    state.claims.mint_in_background(
-        org.billing_owner_uid.clone(),
-        org.org_id.clone(),
-        org.apps.clone(),
-        crate::domain::Role::Admin.as_str().to_string(),
-    );
+    mint_claims_for_org(state, &org);
 
     tracing::info!(
-        org_id = org.org_id,
+        org_id = org.org_id.as_str(),
         plan = org.plan.as_str(),
-        status,
-        "subscription updated"
+        status = org.subscription_status.as_str(),
+        "subscription mirror updated"
     );
 }
 
-async fn handle_subscription_deleted(state: &AccountsState, subscription: &Value) {
-    let Some(customer_id) = subscription["customer"].as_str() else {
-        return;
-    };
-    let Some(mut org) = find_org_by_customer(state, customer_id).await else {
+async fn handle_subscription_status(
+    state: &AccountsState,
+    customer_ref: &str,
+    subscription_status: &str,
+) {
+    let Some(mut org) = find_org_by_customer(state, customer_ref).await else {
         return;
     };
 
-    org.plan = Plan::Free;
-    org.apps = vec![];
-    org.subscription_status = "canceled".to_string();
-    org.subscription_id = None;
-    org.current_period_end = None;
+    org.subscription_status = subscription_status.to_string();
     org.touch();
 
     if let Err(e) = state.store.upsert_org(&org).await {
         tracing::error!(
-            org_id = org.org_id,
-            "subscription delete: failed to save org: {e}"
-        );
-        return;
-    }
-
-    state.claims.mint_in_background(
-        org.billing_owner_uid.clone(),
-        org.org_id.clone(),
-        vec![],
-        crate::domain::Role::Admin.as_str().to_string(),
-    );
-
-    tracing::info!(org_id = org.org_id, "subscription canceled");
-}
-
-async fn handle_payment_failed(state: &AccountsState, invoice: &Value) {
-    let Some(customer_id) = invoice["customer"].as_str() else {
-        return;
-    };
-    let Some(mut org) = find_org_by_customer(state, customer_id).await else {
-        return;
-    };
-
-    org.subscription_status = "past_due".to_string();
-    org.touch();
-
-    if let Err(e) = state.store.upsert_org(&org).await {
-        tracing::error!(
-            org_id = org.org_id,
+            org_id = org.org_id.as_str(),
             "payment_failed: failed to save org: {e}"
         );
     } else {
-        tracing::info!(org_id = org.org_id, "org marked past_due");
+        tracing::info!(org_id = org.org_id.as_str(), "org mirror marked past_due");
     }
 }
 
 // --- Helpers ---
 
-async fn find_org_by_customer(state: &AccountsState, customer_id: &str) -> Option<Org> {
-    match state.store.find_org_by_stripe_customer(customer_id).await {
-        Ok(o) => o,
+async fn find_org_by_customer(state: &AccountsState, customer_ref: &str) -> Option<Org> {
+    match state
+        .store
+        .find_org_by_billing_customer_ref(customer_ref)
+        .await
+    {
+        Ok(org) => org,
         Err(e) => {
-            tracing::error!(customer_id, "find org by customer: {e}");
+            tracing::error!(customer_ref, "find org by customer ref: {e}");
             None
         }
     }
 }
 
-/// Find the org for a Firebase UID (creating one if needed) and link the Stripe customer ID.
+/// Find the org for a Firebase UID (creating one if needed) and link the customer ref.
 async fn resolve_or_create_org(
     state: &AccountsState,
     uid: &str,
-    customer_id: &str,
+    customer_ref: &str,
 ) -> anyhow::Result<Org> {
     let account = state.store.get_account(uid).await?;
 
-    let mut org = match account.and_then(|a| a.org_id) {
+    let mut org = match account.and_then(|account| account.org_id) {
         Some(org_id) => state
             .store
             .get_org(&org_id)
             .await?
             .unwrap_or_else(|| Org::new_personal(uid)),
         None => {
-            // Provision account + org if the user completed checkout without calling /v1/accounts/me first
-            let mut acc = Account::new(uid);
+            // Provision account and org if checkout completed before /v1/accounts/me.
+            let mut account = Account::new(uid);
             let org = Org::new_personal(uid);
-            acc.org_id = Some(org.org_id.clone());
-            state.store.upsert_account(&acc).await?;
+            account.org_id = Some(org.org_id.clone());
+            state.store.upsert_account(&account).await?;
             org
         }
     };
 
-    org.stripe_customer_id = Some(customer_id.to_string());
+    org.billing_customer_ref = Some(customer_ref.to_string());
     org.touch();
     state.store.upsert_org(&org).await?;
     Ok(org)
 }
 
-/// Map Stripe price IDs to a Plan by comparing against the configured
-/// price IDs on `AccountsConfig`. Empty configured IDs make the matching
-/// plan unavailable; non-matching subscriptions fall back to `Plan::Free`.
-fn plan_from_price_ids(price_ids: &[&str], cfg: &AccountsConfig) -> Plan {
-    let team = cfg.stripe_price_team_monthly.as_str();
-    let starter = cfg.stripe_price_starter_monthly.as_str();
-
-    if !team.is_empty() && price_ids.contains(&team) {
-        return Plan::Team;
-    }
-    if !starter.is_empty() && price_ids.contains(&starter) {
-        return Plan::Starter;
-    }
-    Plan::Free
+fn apply_subscription_projection(org: &mut Org, projection: SubscriptionProjection) {
+    org.plan = runway_plan(projection.plan);
+    org.apps = projection.apps;
+    org.subscription_status = projection.subscription_status;
+    org.subscription_id = projection.subscription_ref;
+    org.current_period_end = projection.current_period_end;
+    org.touch();
 }
 
-/// Silence unused-import warning — `StripeSubscription` is only used via serde in webhook JSON.
-const _: () = {
-    let _ = std::mem::size_of::<StripeSubscription>();
-};
+fn runway_plan(plan: CommerceBillingPlan) -> Plan {
+    match plan {
+        CommerceBillingPlan::Free => Plan::Free,
+        CommerceBillingPlan::Starter => Plan::Starter,
+        CommerceBillingPlan::Team => Plan::Team,
+        CommerceBillingPlan::Enterprise => Plan::Enterprise,
+    }
+}
+
+fn mint_claims_for_org(state: &AccountsState, org: &Org) {
+    state.claims.mint_in_background(
+        org.billing_owner_uid.clone(),
+        org.org_id.clone(),
+        org.apps.clone(),
+        Role::Admin.as_str().to_string(),
+    );
+}

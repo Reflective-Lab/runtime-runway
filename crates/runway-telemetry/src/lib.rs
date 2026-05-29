@@ -57,6 +57,25 @@ pub fn init(config: TelemetryConfig) -> Result<TelemetryGuard> {
         sentry::init(sentry::ClientOptions::default())
     };
 
+    // Local app-pairing smokes should not construct the OTLP HTTP exporter:
+    // reqwest's macOS system-proxy discovery can panic in headless shells.
+    // Keep structured logs + Sentry layer locally; enable OTLP outside local dev.
+    let local_dev = std::env::var("LOCAL_DEV").as_deref() == Ok("true");
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    if local_dev && config.otlp_endpoint.is_none() {
+        tracing_subscriber::registry()
+            .with(filter)
+            .with(tracing_subscriber::fmt::layer().json().flatten_event(true))
+            .with(sentry_tracing::layer())
+            .init();
+
+        tracing::info!(service = %config.service, env = %config.env, "telemetry initialised without otlp");
+
+        return Ok(TelemetryGuard {
+            _sentry: sentry_guard,
+        });
+    }
+
     // OTel tracer → Cloud Trace (OTLP/HTTP)
     let endpoint = config
         .otlp_endpoint
@@ -78,8 +97,6 @@ pub fn init(config: TelemetryConfig) -> Result<TelemetryGuard> {
         .install_batch(runtime::Tokio)?;
 
     // JSON subscriber (→ Cloud Logging) + OTel layer + Sentry layer
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-
     tracing_subscriber::registry()
         .with(filter)
         .with(tracing_subscriber::fmt::layer().json().flatten_event(true))

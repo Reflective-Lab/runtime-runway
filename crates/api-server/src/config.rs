@@ -1,10 +1,11 @@
 //! Top-level runtime configuration for the api-server binary.
 //!
 //! Loaded once from environment variables in `main`, then passed by
-//! field-value into the services that need them. Library crates never
-//! read env directly.
+//! field-value into the services that need them. Commercial provider
+//! configuration is delegated to the Commerce Rails config type.
 
 use anyhow::Result;
+use commerce_rails_stripe::CommerceRailsConfig;
 use runway_accounts::AccountsConfig;
 
 #[derive(Debug, Clone)]
@@ -17,15 +18,7 @@ pub struct RunwayConfig {
     /// Comma-separated CORS allow-list. Required in production; empty in
     /// local_dev means "allow any origin".
     pub allowed_origins: String,
-    /// Stripe webhook signing secret. Required in production.
-    pub stripe_webhook_secret: String,
-    /// Stripe API secret key. Optional — empty disables Stripe entirely
-    /// (customer lookups, checkout, portal all degrade to no-ops).
-    pub stripe_secret_key: String,
-    /// Stripe price ID for the Team monthly plan. Optional.
-    pub stripe_price_team_monthly: String,
-    /// Stripe price ID for the Starter monthly plan. Optional.
-    pub stripe_price_starter_monthly: String,
+    pub commerce: CommerceRailsConfig,
     /// TCP port to listen on. Cloud Run injects `PORT`; local dev
     /// defaults to 8080.
     pub port: u16,
@@ -36,18 +29,9 @@ impl RunwayConfig {
         let local_dev = std::env::var("LOCAL_DEV").as_deref() == Ok("true");
 
         let allowed_origins = std::env::var("ALLOWED_ORIGINS").unwrap_or_default();
-        let stripe_webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default();
-        let stripe_secret_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_default();
-        let stripe_price_team_monthly =
-            std::env::var("STRIPE_PRICE_TEAM_MONTHLY").unwrap_or_default();
-        let stripe_price_starter_monthly =
-            std::env::var("STRIPE_PRICE_STARTER_MONTHLY").unwrap_or_default();
+        let commerce = CommerceRailsConfig::from_env(local_dev)?;
 
         if !local_dev {
-            anyhow::ensure!(
-                !stripe_webhook_secret.is_empty(),
-                "STRIPE_WEBHOOK_SECRET must be set in production (empty value disables HMAC verification)"
-            );
             anyhow::ensure!(
                 !allowed_origins.is_empty(),
                 "ALLOWED_ORIGINS must be set in production (e.g. https://apps.reflective.se)"
@@ -95,10 +79,7 @@ impl RunwayConfig {
             route_prefix,
             app_url,
             allowed_origins,
-            stripe_webhook_secret,
-            stripe_secret_key,
-            stripe_price_team_monthly,
-            stripe_price_starter_monthly,
+            commerce,
             port,
         })
     }
@@ -108,10 +89,7 @@ impl RunwayConfig {
         AccountsConfig {
             local_dev: self.local_dev,
             app_url: self.app_url.clone(),
-            stripe_webhook_secret: self.stripe_webhook_secret.clone(),
-            stripe_secret_key: self.stripe_secret_key.clone(),
-            stripe_price_team_monthly: self.stripe_price_team_monthly.clone(),
-            stripe_price_starter_monthly: self.stripe_price_starter_monthly.clone(),
+            commerce: self.commerce.clone(),
         }
     }
 }

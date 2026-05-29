@@ -92,7 +92,7 @@ impl Query {
 }
 
 /// Structured document store. The `collection` string maps to a Firestore
-/// collection or a SQLite table row with `collection = ?`.
+/// collection or a redb table keyed by `(collection, id)`.
 #[async_trait]
 pub trait DocumentStore: Send + Sync {
     async fn put(&self, collection: &str, doc: Document) -> Result<()>;

@@ -1,6 +1,9 @@
 use async_trait::async_trait;
 
-use crate::traits::{Error, Result, embedding::EmbeddingProvider, vector::EMBEDDING_DIMS};
+use crate::traits::{
+    Error, Result,
+    embedding::{EMBEDDING_DIMS, Embedding, EmbeddingProvider},
+};
 
 /// Local embedder for offline Tauri apps.
 ///
@@ -24,7 +27,10 @@ impl Default for LocalEmbedder {
 
 #[async_trait]
 impl EmbeddingProvider for LocalEmbedder {
-    async fn embed(&self, text: &str) -> Result<Vec<f32>> {
+    async fn embed(&self, text: &str) -> Result<Embedding> {
+        if text.trim().is_empty() {
+            return Err(Error::Other("embedding input is empty".into()));
+        }
         let results = self.embed_batch(&[text]).await?;
         results
             .into_iter()
@@ -32,18 +38,19 @@ impl EmbeddingProvider for LocalEmbedder {
             .ok_or_else(|| Error::Other("empty local embedding".into()))
     }
 
-    async fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+    async fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Embedding>> {
+        for text in texts {
+            if text.trim().is_empty() {
+                return Err(Error::Other("embedding input is empty".into()));
+            }
+        }
         // fastembed is synchronous; run in a blocking thread to avoid blocking the async runtime
         let owned: Vec<String> = texts.iter().map(|s| s.to_string()).collect();
-        let result = tokio::task::spawn_blocking(move || embed_sync(&owned))
+        let raw: Vec<Vec<f32>> = tokio::task::spawn_blocking(move || embed_sync(&owned))
             .await
             .map_err(|e| Error::Other(e.to_string()))?
             .map_err(|e| Error::Other(e.to_string()))?;
-        Ok(result)
-    }
-
-    fn dims(&self) -> usize {
-        EMBEDDING_DIMS
+        raw.into_iter().map(Embedding::new).collect()
     }
 }
 
