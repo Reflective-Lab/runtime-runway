@@ -24,7 +24,7 @@ impl GcsObjectStore {
     fn upload_url(&self, key: &str) -> String {
         format!(
             "{}/upload/storage/v1/b/{}/o?uploadType=media&name={}",
-            crate::endpoints::GCS_BASE,
+            crate::endpoints::gcs_base(),
             self.bucket,
             urlencoding::encode(key)
         )
@@ -33,7 +33,7 @@ impl GcsObjectStore {
     fn download_url(&self, key: &str) -> String {
         format!(
             "{}/storage/v1/b/{}/o/{}?alt=media",
-            crate::endpoints::GCS_BASE,
+            crate::endpoints::gcs_base(),
             self.bucket,
             urlencoding::encode(key)
         )
@@ -42,7 +42,7 @@ impl GcsObjectStore {
     fn meta_url(&self, key: &str) -> String {
         format!(
             "{}/storage/v1/b/{}/o/{}",
-            crate::endpoints::GCS_BASE,
+            crate::endpoints::gcs_base(),
             self.bucket,
             urlencoding::encode(key)
         )
@@ -120,7 +120,7 @@ impl ObjectStore for GcsObjectStore {
     async fn list(&self, prefix: &str) -> Result<Vec<String>> {
         let url = format!(
             "{}/storage/v1/b/{}/o?prefix={}",
-            crate::endpoints::GCS_BASE,
+            crate::endpoints::gcs_base(),
             self.bucket,
             urlencoding::encode(prefix)
         );
