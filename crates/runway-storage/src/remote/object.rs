@@ -95,13 +95,19 @@ impl ObjectStore for GcsObjectStore {
     }
 
     async fn delete(&self, key: &str) -> Result<()> {
-        self.client
+        let resp = self
+            .client
             .delete(self.meta_url(key))
             .bearer_auth_if_set(&self.bearer().await?)
             .send()
             .await
-            .map_err(|e| Error::Network(e.to_string()))?
-            .error_for_status()
+            .map_err(|e| Error::Network(e.to_string()))?;
+
+        // Idempotent: deleting a missing object is success.
+        if resp.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(());
+        }
+        resp.error_for_status()
             .map_err(|e| Error::Network(e.to_string()))?;
         Ok(())
     }

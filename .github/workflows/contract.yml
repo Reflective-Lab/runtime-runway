@@ -39,6 +39,11 @@ jobs:
         run: just contract-local
       - name: Bring up emulator stack
         run: docker compose -f crates/runway-storage/tests/docker-compose.contract.yml up -d --wait
+      - name: Seed runway-contract bucket in fake-gcs-server
+        run: |
+          curl -fsS -X POST 'http://localhost:4443/storage/v1/b?project=runway-contract' \
+            -H 'Content-Type: application/json' -d '{"name":"runway-contract"}' >/dev/null \
+            || curl -fsS 'http://localhost:4443/storage/v1/b/runway-contract' >/dev/null
       - name: Run emulator contract suite
         env:
           FIRESTORE_EMULATOR_HOST: localhost:8080

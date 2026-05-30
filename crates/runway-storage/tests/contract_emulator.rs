@@ -14,7 +14,7 @@ use runway_storage::{
     embedding::local::LocalEmbedder,
     remote::{RemoteConfig, RemoteStorageKit, TokenSource},
 };
-use runway_storage_contract::{ContractContext, document, embedding, event, object, vector};
+use runway_storage_contract::{ContractContext, document, embedding, event, object};
 
 /// Build a RemoteConfig pointing at the emulators. Project id is fixed to
 /// "runway-contract" — the same value docker-compose.contract.yml passes to
@@ -92,14 +92,10 @@ async fn event_contract() {
         .assert_passed();
 }
 
-#[tokio::test]
-#[ignore]
-async fn vector_contract() {
-    let kit = build_kit().await;
-    vector::run_vector_shape_suite(Arc::clone(&kit.vectors), ctx())
-        .await
-        .assert_passed();
-}
+// VectorStore exercises Vertex AI Vector Search, which has no public
+// emulator. The contract suite for vectors only runs against real GCP
+// (contract_real_gcp.rs). Re-enable here only if/when a usable emulator
+// substitute appears.
 
 #[tokio::test]
 #[ignore]

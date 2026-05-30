@@ -332,6 +332,9 @@ contract-local:
 # Run contract suite against the Firestore/GCS/Pub-Sub emulators with fastembed
 contract-emulator:
 	docker compose -f crates/runway-storage/tests/docker-compose.contract.yml up -d --wait
+	curl -fsS -X POST 'http://localhost:4443/storage/v1/b?project=runway-contract' \
+	  -H 'Content-Type: application/json' -d '{"name":"runway-contract"}' >/dev/null \
+	  || curl -fsS 'http://localhost:4443/storage/v1/b/runway-contract' >/dev/null
 	-FIRESTORE_EMULATOR_HOST=localhost:8080 \
 	 PUBSUB_EMULATOR_HOST=localhost:8085 \
 	 STORAGE_EMULATOR_HOST=http://localhost:4443 \
