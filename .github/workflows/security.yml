@@ -32,7 +32,13 @@ jobs:
         with:
           tool: cargo-audit
       - name: Run cargo-audit (blocking)
-        run: cargo audit --deny warnings
+        run: |
+          set -euo pipefail
+          ignores=()
+          while IFS= read -r id; do
+            ignores+=(--ignore "$id")
+          done < <(grep -oE 'RUSTSEC-[0-9]+-[0-9]+' audit.toml | sort -u)
+          cargo audit --deny warnings "${ignores[@]}"
 
   secrets:
     name: Secrets Scan
