@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 
 use crate::{
-    remote::GcpToken,
+    remote::{BearerAuthExt, GcpToken},
     traits::{
         Error, Result,
         embedding::{Embedding, EmbeddingProvider},
@@ -74,7 +74,7 @@ impl EmbeddingProvider for VertexEmbedder {
         let resp: serde_json::Value = self
             .client
             .post(self.endpoint())
-            .bearer_auth(self.bearer().await?)
+            .bearer_auth_if_set(&self.bearer().await?)
             .json(&body)
             .send()
             .await

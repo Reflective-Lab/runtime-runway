@@ -109,3 +109,23 @@ impl GcpToken {
         }
     }
 }
+
+/// Apply a bearer token only if it is non-empty.
+///
+/// The GCP emulators reject `Authorization: Bearer ` (empty token) with
+/// 500 UNKNOWN, but accept the request when the header is absent entirely.
+/// Tests against the emulator stack use `TokenSource::Static(String::new())`,
+/// so call sites must drop the header in that case.
+pub trait BearerAuthExt {
+    fn bearer_auth_if_set(self, token: &str) -> Self;
+}
+
+impl BearerAuthExt for reqwest::RequestBuilder {
+    fn bearer_auth_if_set(self, token: &str) -> Self {
+        if token.is_empty() {
+            self
+        } else {
+            self.bearer_auth(token)
+        }
+    }
+}

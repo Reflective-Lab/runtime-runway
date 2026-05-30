@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use bytes::Bytes;
 
 use crate::{
-    remote::GcpToken,
+    remote::{BearerAuthExt, GcpToken},
     traits::{Error, Result, object::ObjectStore},
 };
 
@@ -62,7 +62,7 @@ impl ObjectStore for GcsObjectStore {
         let ct = content_type.unwrap_or("application/octet-stream");
         self.client
             .post(self.upload_url(key))
-            .bearer_auth(self.bearer().await?)
+            .bearer_auth_if_set(&self.bearer().await?)
             .header("Content-Type", ct)
             .body(data)
             .send()
@@ -77,7 +77,7 @@ impl ObjectStore for GcsObjectStore {
         let resp = self
             .client
             .get(self.download_url(key))
-            .bearer_auth(self.bearer().await?)
+            .bearer_auth_if_set(&self.bearer().await?)
             .send()
             .await
             .map_err(|e| Error::Network(e.to_string()))?;
@@ -97,7 +97,7 @@ impl ObjectStore for GcsObjectStore {
     async fn delete(&self, key: &str) -> Result<()> {
         self.client
             .delete(self.meta_url(key))
-            .bearer_auth(self.bearer().await?)
+            .bearer_auth_if_set(&self.bearer().await?)
             .send()
             .await
             .map_err(|e| Error::Network(e.to_string()))?
@@ -110,7 +110,7 @@ impl ObjectStore for GcsObjectStore {
         let resp = self
             .client
             .head(self.meta_url(key))
-            .bearer_auth(self.bearer().await?)
+            .bearer_auth_if_set(&self.bearer().await?)
             .send()
             .await
             .map_err(|e| Error::Network(e.to_string()))?;
@@ -127,7 +127,7 @@ impl ObjectStore for GcsObjectStore {
         let body: serde_json::Value = self
             .client
             .get(&url)
-            .bearer_auth(self.bearer().await?)
+            .bearer_auth_if_set(&self.bearer().await?)
             .send()
             .await
             .map_err(|e| Error::Network(e.to_string()))?

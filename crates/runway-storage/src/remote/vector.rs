@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use serde_json::Value;
 
 use crate::{
-    remote::GcpToken,
+    remote::{BearerAuthExt, GcpToken},
     traits::{
         Error, Result,
         embedding::Embedding,
@@ -68,7 +68,7 @@ impl VectorStore for VertexVectorStore {
         });
         self.client
             .post(&url)
-            .bearer_auth(self.bearer().await?)
+            .bearer_auth_if_set(&self.bearer().await?)
             .json(&body)
             .send()
             .await
@@ -99,7 +99,7 @@ impl VectorStore for VertexVectorStore {
         let resp: Value = self
             .client
             .post(&url)
-            .bearer_auth(self.bearer().await?)
+            .bearer_auth_if_set(&self.bearer().await?)
             .json(&body)
             .send()
             .await
@@ -138,7 +138,7 @@ impl VectorStore for VertexVectorStore {
         let body = serde_json::json!({ "datapointIds": [id] });
         self.client
             .post(&url)
-            .bearer_auth(self.bearer().await?)
+            .bearer_auth_if_set(&self.bearer().await?)
             .json(&body)
             .send()
             .await

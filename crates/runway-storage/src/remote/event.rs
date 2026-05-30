@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use serde_json::Value;
 
 use crate::{
-    remote::GcpToken,
+    remote::{BearerAuthExt, GcpToken},
     traits::{
         Error, Result,
         event::{EventLog, EventQuery, StoredEvent},
@@ -61,7 +61,7 @@ impl EventLog for FirestoreEventLog {
 
         self.client
             .patch(&url)
-            .bearer_auth(self.bearer().await?)
+            .bearer_auth_if_set(&self.bearer().await?)
             .json(&body)
             .send()
             .await
@@ -160,7 +160,7 @@ impl EventLog for FirestoreEventLog {
         let resp: Value = self
             .client
             .post(&url)
-            .bearer_auth(self.bearer().await?)
+            .bearer_auth_if_set(&self.bearer().await?)
             .json(&body)
             .send()
             .await

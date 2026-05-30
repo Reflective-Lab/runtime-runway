@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use serde_json::Value;
 
 use crate::{
-    remote::GcpToken,
+    remote::{BearerAuthExt, GcpToken},
     traits::{
         Error, Result,
         document::{Document, DocumentStore, Filter, Query},
@@ -78,7 +78,7 @@ impl DocumentStore for FirestoreDocumentStore {
         let body = Self::to_firestore_fields(&doc.data);
         self.client
             .patch(&url)
-            .bearer_auth(self.bearer().await?)
+            .bearer_auth_if_set(&self.bearer().await?)
             .json(&body)
             .send()
             .await
@@ -93,7 +93,7 @@ impl DocumentStore for FirestoreDocumentStore {
         let resp = self
             .client
             .get(&url)
-            .bearer_auth(self.bearer().await?)
+            .bearer_auth_if_set(&self.bearer().await?)
             .send()
             .await
             .map_err(|e| Error::Network(e.to_string()))?;
@@ -124,7 +124,7 @@ impl DocumentStore for FirestoreDocumentStore {
         let url = format!("{}/{}/{}", self.base_url(), collection, id);
         self.client
             .delete(&url)
-            .bearer_auth(self.bearer().await?)
+            .bearer_auth_if_set(&self.bearer().await?)
             .send()
             .await
             .map_err(|e| Error::Network(e.to_string()))?
@@ -134,15 +134,21 @@ impl DocumentStore for FirestoreDocumentStore {
     }
 
     async fn query(&self, collection: &str, q: Query) -> Result<Vec<Document>> {
-        let url = format!("{}:runQuery", self.base_url());
+        // Firestore rejects `collectionId` values that contain `/`. When the
+        // caller passes a multi-segment collection path (e.g.
+        // "_contract/abc/docs"), the query must be scoped to the parent
+        // document path ("_contract/abc") and the from clause must use only
+        // the leaf collection name ("docs").
+        let (parent, leaf) = match collection.rsplit_once('/') {
+            Some((parent, leaf)) => (Some(parent), leaf),
+            None => (None, collection),
+        };
+        let url = match parent {
+            Some(p) => format!("{}/{}:runQuery", self.base_url(), p),
+            None => format!("{}:runQuery", self.base_url()),
+        };
 
-        let mut filters = vec![serde_json::json!({
-            "fieldFilter": {
-                "field": { "fieldPath": "__name__" },
-                "op": "GREATER_THAN_OR_EQUAL",
-                "value": { "stringValue": format!("projects/{}/databases/(default)/documents/{}/", self.project_id, collection) }
-            }
-        })];
+        let mut filters: Vec<Value> = Vec::new();
 
         if let Some(ts) = q.updated_after {
             filters.push(serde_json::json!({
@@ -164,27 +170,30 @@ impl DocumentStore for FirestoreDocumentStore {
             }));
         }
 
-        let composite = if filters.len() == 1 {
-            filters.remove(0)
-        } else {
-            serde_json::json!({ "compositeFilter": { "op": "AND", "filters": filters } })
-        };
-
-        let mut body = serde_json::json!({
-            "structuredQuery": {
-                "from": [{ "collectionId": collection }],
-                "where": composite
-            }
+        let mut structured = serde_json::json!({
+            "from": [{ "collectionId": leaf }],
         });
 
-        if let Some(limit) = q.limit {
-            body["structuredQuery"]["limit"] = serde_json::json!(limit);
+        match filters.len() {
+            0 => {}
+            1 => structured["where"] = filters.remove(0),
+            _ => {
+                structured["where"] = serde_json::json!({
+                    "compositeFilter": { "op": "AND", "filters": filters }
+                });
+            }
         }
+
+        if let Some(limit) = q.limit {
+            structured["limit"] = serde_json::json!(limit);
+        }
+
+        let body = serde_json::json!({ "structuredQuery": structured });
 
         let resp: Value = self
             .client
             .post(&url)
-            .bearer_auth(self.bearer().await?)
+            .bearer_auth_if_set(&self.bearer().await?)
             .json(&body)
             .send()
             .await
