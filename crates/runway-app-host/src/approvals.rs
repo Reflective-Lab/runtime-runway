@@ -85,6 +85,7 @@ fn build_envelope(
         occurred_at: Utc::now(),
         app_id: state.packet.app_id.clone(),
         run_id: None,
+        job_id: None,
         correlation_id: body.correlation_id,
         actor: body.actor,
         payload: serde_json::json!({

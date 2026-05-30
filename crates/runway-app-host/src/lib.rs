@@ -12,7 +12,7 @@ pub mod sse;
 pub use builder::{BuiltHost, RunwayAppHostBuilder};
 pub use context::HostContext;
 pub use module::{HelmModule, TonicService};
-pub use realtime::{EventEnvelope, EventHub, EventHubHandle};
+pub use realtime::{EventCursor, EventEnvelope, EventHub, EventHubHandle, EventSubscription};
 
 use std::sync::Arc;
 
