@@ -20,6 +20,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Reflective-Lab/commerce-rails
+          token: ${{ secrets.COMMERCE_RAILS_TOKEN }}
           path: _commerce-rails
       - name: Place commerce-rails at runway's sibling path
         run: mv _commerce-rails "$GITHUB_WORKSPACE/../commerce-rails"
@@ -44,6 +45,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Reflective-Lab/commerce-rails
+          token: ${{ secrets.COMMERCE_RAILS_TOKEN }}
           path: _commerce-rails
       - name: Place commerce-rails at runway's sibling path
         run: mv _commerce-rails "$GITHUB_WORKSPACE/../commerce-rails"
@@ -68,6 +70,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Reflective-Lab/commerce-rails
+          token: ${{ secrets.COMMERCE_RAILS_TOKEN }}
           path: _commerce-rails
       - name: Place commerce-rails at runway's sibling path
         run: mv _commerce-rails "$GITHUB_WORKSPACE/../commerce-rails"
@@ -92,6 +95,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Reflective-Lab/commerce-rails
+          token: ${{ secrets.COMMERCE_RAILS_TOKEN }}
           path: _commerce-rails
       - name: Place commerce-rails at runway's sibling path
         run: mv _commerce-rails "$GITHUB_WORKSPACE/../commerce-rails"
