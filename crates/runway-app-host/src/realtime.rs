@@ -232,12 +232,7 @@ mod hub_tests {
         sample_env(seq, ty, None, None)
     }
 
-    fn sample_env(
-        seq: u64,
-        ty: &str,
-        run_id: Option<&str>,
-        job_id: Option<&str>,
-    ) -> EventEnvelope {
+    fn sample_env(seq: u64, ty: &str, run_id: Option<&str>, job_id: Option<&str>) -> EventEnvelope {
         EventEnvelope {
             event_id: Uuid::new_v4(),
             sequence: seq,
@@ -301,10 +296,11 @@ mod hub_tests {
         };
         let sub = h.subscribe_with_cursor(cursor);
         assert_eq!(sub.replay.len(), 2); // only run-1 events
-        assert!(sub
-            .replay
-            .iter()
-            .all(|e| e.run_id.as_deref() == Some("run-1")));
+        assert!(
+            sub.replay
+                .iter()
+                .all(|e| e.run_id.as_deref() == Some("run-1"))
+        );
     }
 
     #[tokio::test]
@@ -349,10 +345,11 @@ mod hub_tests {
         };
         let sub = h.subscribe_with_cursor(cursor);
         assert_eq!(sub.replay.len(), 2); // only job-A events
-        assert!(sub
-            .replay
-            .iter()
-            .all(|e| e.job_id.as_deref() == Some("job-A")));
+        assert!(
+            sub.replay
+                .iter()
+                .all(|e| e.job_id.as_deref() == Some("job-A"))
+        );
     }
 
     #[tokio::test]
