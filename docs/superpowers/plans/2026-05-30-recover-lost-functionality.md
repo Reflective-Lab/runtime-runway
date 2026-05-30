@@ -22,7 +22,7 @@
 | quorum-sense | `162ddf5` (Phase 8) |
 | atlas-integration | `ea7d029` (Phase 11) |
 
-7 marquee apps migrated to `RunwayAppHost`: Quorum, Atlas, Catalyst, Tally-escrow, Fathom-narrative, Plumb-execution, Scout-sourcing. Warden-compliance NOT migrated.
+**All 7 marquee apps that have backends are migrated to `RunwayAppHost`:** Quorum, Atlas, Catalyst, Tally-escrow, Fathom-narrative, Plumb-execution, Scout-sourcing. The other 6 directories in `marquee-apps/` (kb, keystone-architecture, shoal-meta, triage-keeper, vouch-lending, warden-compliance) have no backend code yet — they'll be RunwayAppHost-native when built. No migration backlog.
 
 `just spike-1-smoke` passes all 4 stages (happy path only).
 
@@ -235,32 +235,21 @@ The user has separately landed `commerce-rails/crates/commerce-rails-stripe` (re
 
 ---
 
-### Item F — Warden-compliance migration (NOT lost, just pending)
+### Item F — *(removed)*
 
-**What we know:** Per the user's 8-app rollout table, `warden-compliance` is the lone marquee app NOT yet migrated to `RunwayAppHost`. This isn't recovery — it's completing the rollout.
-
-**Steps:**
-
-- [ ] **F1: Same pattern as Phase 8 (Quorum) and Phase 11 (Atlas) migrations** — survey binary crate, construct `AppExecutionPacket`, mount `helm.governed-jobs` (+ helm.operator-control if Warden's `runway.app.json` declares it), wrap existing routes in a `WardenDomainModule`, rewrite boot path.
-
-- [ ] **F2: packet_key handling** — apply the Phase 1.5 convention: if Warden's `runway.app.json` carries an `-readiness`-suffixed packet_key, drop the suffix to match `JobReadinessPacket.job_key`.
-
-- [ ] **F3: Run any warden-specific smoke** — and the spike-1 smoke if Warden participates in cross-app flows (likely not, but check).
-
-**Effort estimate:** 1–2 hours, mirror of the prior migrations.
+Originally a Warden-compliance migration item. Audit revealed warden-compliance (and 5 other directories in `marquee-apps/`) has no backend code yet, so there's nothing to migrate. They'll be RunwayAppHost-native when eventually built.
 
 ---
 
 ## Execution order
 
-Independent items, but a sensible order:
+Each item is independent; order is just a recommendation:
 
 1. **Item A (http_api.rs audit)** — biggest unknown surface area, settle it first so subsequent items don't re-tread the same ground.
 2. **Item B (gRPC services audit)** — closely related to A; likely some overlap on consumer surveys.
-3. **Item E (smoke edge cases)** — independent, can land anytime, but doing it before any subscription / commerce work means we're defensively covered if Item C uncovers HITL gate behavior we want to validate.
+3. **Item E (smoke edge cases)** — independent, can land anytime. Doing it before commerce/subscription work means we're defensively covered if Item C uncovers HITL gate behavior we want to validate.
 4. **Item C (subscription truths → commerce-rails)** — needs decision on truth-wrapping pattern; biggest design surface.
-5. **Item F (Warden)** — independent, can land anytime, fits in any gap.
-6. **Item D (data_transformer evaluation)** — smallest, leave for last unless it surfaces during Item A as needed.
+5. **Item D (data_transformer evaluation)** — smallest, leave for last unless it surfaces during Item A as needed.
 
 ## Effort summary
 
@@ -271,10 +260,9 @@ Independent items, but a sensible order:
 | C: subscription truths | 2 | 8 |
 | D: data_transformer | 0.5 | 2 |
 | E: smoke edge cases | 2 | 3 |
-| F: warden migration | 1 | 2 |
-| **Total** | **8.5** | **22** |
+| **Total** | **7.5** | **20** |
 
-A small focused day-and-a-half on the low end. Two days max if everything in Item C goes the full "implement as truths" route.
+A single focused day on the low end. Two days max if Item C goes the full "implement as truths" route.
 
 ---
 
@@ -283,7 +271,10 @@ A small focused day-and-a-half on the low end. Two days max if everything in Ite
 - [ ] Per-route decision table for `http_api.rs` exists and is committed to `kb/Architecture/` (decisions are documented even when the answer is "dropped")
 - [ ] No silent functionality loss — every deleted route either recovered or explicitly documented as intentionally dropped
 - [ ] `just spike-1-smoke` extended with reject + timeout stages, all passing
-- [ ] All 8 marquee apps boot through `RunwayAppHost` (including Warden)
 - [ ] Subscription truth keys either dispatch through commerce-rails-truths or callers updated to invoke the operations directly
 - [ ] `generate_data_transformer` resolved (recovered to experiments dir or documented as dropped)
 - [ ] `kb/Architecture/Application Server Deletion.md` exists summarizing what was kept, moved, and dropped (single source of truth for future archaeology)
+
+## Disposition notes
+
+This plan is **not on a timer**. Each item asks "did we lose something that matters?" — a question that benefits from careful per-item judgment, not session-pressure decisions. Pick items up individually when the answer becomes clearer or when something downstream (a frontend feature, a billing flow) surfaces a missing dependency. The plan exists so nothing slips through the cracks, not as a forcing function.
