@@ -1,4 +1,6 @@
-//! Contract tests against emulated GCP services + fastembed.
+//! Contract tests against emulated GCP services + fastembed. #[ignore]'d by
+//! default so `cargo test --all-targets` (which has no emulator running)
+//! skips them; run with `cargo test -- --ignored` or `just contract-emulator`.
 //!
 //! Requires the emulator stack from docker-compose.contract.yml to be running.
 //! `just contract-emulator` (Task 14) handles startup/teardown automatically.
@@ -64,6 +66,7 @@ fn ctx() -> ContractContext {
 }
 
 #[tokio::test]
+#[ignore]
 async fn document_contract() {
     let kit = build_kit().await;
     document::run_document_suite(Arc::clone(&kit.documents), ctx())
@@ -72,6 +75,7 @@ async fn document_contract() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn object_contract() {
     let kit = build_kit().await;
     object::run_object_suite(Arc::clone(&kit.objects), ctx())
@@ -80,6 +84,7 @@ async fn object_contract() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn event_contract() {
     let kit = build_kit().await;
     event::run_event_suite(Arc::clone(&kit.events), ctx())
@@ -88,6 +93,7 @@ async fn event_contract() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn vector_contract() {
     let kit = build_kit().await;
     vector::run_vector_shape_suite(Arc::clone(&kit.vectors), ctx())
@@ -96,6 +102,7 @@ async fn vector_contract() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn embedding_contract() {
     let kit = build_kit().await;
     embedding::run_embedding_shape_suite(Arc::clone(&kit.embeddings), ctx())

@@ -335,7 +335,7 @@ contract-emulator:
 	-FIRESTORE_EMULATOR_HOST=localhost:8080 \
 	 PUBSUB_EMULATOR_HOST=localhost:8085 \
 	 STORAGE_EMULATOR_HOST=http://localhost:4443 \
-	   cargo test -p runway-storage --test contract_emulator -- --nocapture
+	   cargo test -p runway-storage --test contract_emulator -- --ignored --nocapture
 	docker compose -f crates/runway-storage/tests/docker-compose.contract.yml down
 
 # Run contract suite against real staging GCP.
