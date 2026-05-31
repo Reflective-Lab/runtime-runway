@@ -32,6 +32,14 @@
 
 ### Item A — `application-server/src/http_api.rs` route audit (~2,200 lines deleted)
 
+**What it is:** Roughly 2,200 lines of HTTP routes that lived in the old monolithic `application-server` and powered the desktop workbench UI — listing approvals, browsing truths, looking up org profiles, paging through workflow cases, surfacing system profile. Two operator-control routes were carefully extracted in Phase 3a; the rest went away with the crate.
+
+**What rewriting it would mean:** Pull the pre-deletion file from git, walk it route-by-route, decide which still have a live consumer, then re-mount each survivor into the right post-refactor home — `helm-operator-control`, a new `helm-workbench` crate, or `runway-app-host`. Most are thin read-models (pull state, serialize, return JSON), so the hard work is the audit, not the typing.
+
+**Why it matters:** If the Helm desktop UI or any frontend still calls one of these endpoints, deletion broke it silently — you only find out when a feature stops working. The deletion was a "Phase 9 swept the crate" move, not a per-route decision, so there's no audit trail saying "yes, this route had no consumer."
+
+**Why it might be safe to forget:** Each of the 7 migrated marquee apps ships its own backend and doesn't call into a central application-server. If the desktop UI is dormant or being rebuilt against the new shape, most of these routes have no live caller and recovering them is reverse-progress.
+
 **What we know:** Phase 3a extracted only 2 operator-control preview routes from `http_api.rs` (which was 2,302 lines). The other ~2,200 lines were deleted with the crate in Phase 9. No one audited route-by-route what was in there.
 
 **What's at risk:** any HTTP route that wasn't gRPC (those moved in Phase 6b) and wasn't operator-control. Likely candidates based on the original `application-server` shape: workbench dashboard, account workspace summaries, approvals listing, system profile, capability-module listing, truth catalog browsing, organization listing, workflow case listing — all of these had HTTP read-models per the `workbench_backend` types we noted during Phase 1.5.
@@ -86,6 +94,14 @@
 
 ### Item B — `IdentityGrpc`, `TruthCatalogGrpc`, `ModuleRegistryGrpc` gRPC services audit
 
+**What it is:** Three gRPC services that lived alongside the deleted HTTP routes — Identity (who is the calling user, what session do they have), TruthCatalog (what truths exist in the platform, what's their schema), ModuleRegistry (what modules are registered, how to discover them). They were tagged "platform" in Phase 6b which is why they didn't move with the domain services to atelier-showcase.
+
+**What rewriting it would mean:** For each service with a real consumer, recover the proto + impl from git, decide its post-refactor home (Identity → `runway-auth`; TruthCatalog → `helm-truth-execution`; ModuleRegistry → `helm-operator-control` or a new `helm-registry`), copy the implementation in, swap old internal paths for new ones, and re-mount via `HelmModule::grpc_services()`. About 2 hours per recovered service.
+
+**Why it matters:** The Helm desktop UI almost certainly calls IdentityService for login state, and any "browse truths/modules" UI surface would hit the other two. Silent deletion of an auth-shaped service leaves a 503-shaped hole that crashes a frontend on next launch.
+
+**Why it might be safe to forget:** All 7 migrated marquee apps do their own auth via `runway-auth`/Firebase, so they're not consumers. If the desktop UI is being retired or rebuilt with a different identity model anyway, the platform-level versions of these services serve nobody and re-creating them is dead weight.
+
 **What we know:** Three gRPC services (out of 10) in `application-server/src/service.rs` were NOT moved to atelier-showcase in Phase 6b because they were tagged "platform" — Identity, TruthCatalog, ModuleRegistry. They stayed in `application-server`. Phase 9 then deleted the whole crate.
 
 **What's at risk:**
@@ -129,6 +145,14 @@
 ---
 
 ### Item C — 5 subscription truth bodies → commerce-rails
+
+**What it is:** Five subscription/billing operations that were modeled as truths — activate subscription, upgrade plan, refill prepaid AI credits, suspend service on payment failure, reconcile model usage against the customer ledger. Each one was a `TruthBody` with a key the dispatcher could route to. Phase 6a deleted them on purpose (subscription logic belongs in commerce-rails, not Helm), but the truth keys themselves still exist in the catalog — so a caller asking the dispatcher for `activate-subscription` today gets `"no truth body registered"`.
+
+**What rewriting it would mean:** Three branching options. (1) Reimplement as `TruthBody` impls in a new `commerce-rails-truths` crate — apps register them like Catalyst registers its 3 truths. (2) Drop the truth contract entirely and expose the operations as plain methods on `commerce-rails-stripe`; callers invoke directly. (3) Implement the operation in commerce-rails, then add a thin `TruthBody` wrapper that delegates. Option 1 is ~4-8 hours; option 2 is ~2-3 hours; option 3 is option 1 plus option 2.
+
+**Why it matters:** Subscription operations are exactly the kind of thing that benefits from HITL gates — operators may want to review a refund, a plan downgrade, or a usage-reconciliation diff before it commits. The truth dispatch contract is what gives you that approval gate for free. Dropping the wrapper means subscription work loses the standard governance path.
+
+**Why it might be safe to forget:** If no caller in any app is currently dispatching these truth keys, the unregistered-truth error is theoretical. `commerce-rails-stripe` may already cover the actual billing ops via direct methods, and subscription flows may not need HITL gates if they're driven by webhooks or scheduled jobs that no operator would ever review in-loop.
 
 **What we know:** Phase 6a deleted these:
 - `activate_subscription.rs`
@@ -179,6 +203,14 @@ The user has separately landed `commerce-rails/crates/commerce-rails-stripe` (re
 
 ### Item D — `generate_data_transformer` evaluation
 
+**What it is:** A 482-line `TruthBody` that demonstrates the "code generation as a convergence step" pattern — the proof artifact for experiment EXP-002. Three suggestors (CodegenGap → CodeGen → CodeVerifier) iterate against stubbed LLM output until convergence. No CRM or domain logic; purely a convergence-pattern demonstration.
+
+**What rewriting it would mean:** Not rewriting — relocating. The file is recoverable from git (`a63811c^`). The minimum viable move is creating a small test crate under `helms/experiments/code/EXP-002/` that re-runs the convergence proof against the post-refactor `helm-truth-execution` shape. Probably 1-2 hours including workspace path-dep wiring.
+
+**Why it matters:** EXP-002 is currently listed as "running" and "Confirmed" in the kb and referenced in Milestones.md plus Capability Binding.md. If the docs say EXP-002 proved convergence-step but the proof code is gone, the experiment record is hollow — anyone re-validating the claim later has nothing to run.
+
+**Why it might be safe to forget:** If the convergence-step pattern has since been generalized into the platform proper (baked into the dispatcher or a runtime helper), the standalone proof artifact is no longer load-bearing. Preserving it in git history is defensible if nobody intends to rerun the experiment.
+
 **What we know:** 482-line truth body, `#[cfg(test)]`-gated, noted as "TODO Phase 9 evaluation" by the Phase 6a implementer. Deleted with `application-server` in Phase 9.
 
 **What it does (per the implementer's report):** "Generic convergence experiment (EXP-002) proving code-gen as a convergence step — no CRM domain logic, no app-specific imports."
@@ -210,6 +242,14 @@ The user has separately landed `commerce-rails/crates/commerce-rails-stripe` (re
 ---
 
 ### Item E — `spike-1-smoke` gate edge cases
+
+**What it is:** Test coverage for the two HITL gate paths the happy-path smoke never touches — operator rejects the gate (should produce `gate.rejected` → `job.failed`) and operator does nothing past the 600s timeout (should fire the timeout and fail the job). Phase 4b's gate-flow rewrite was reviewed as preserving both behaviors, but neither is asserted by any test today.
+
+**What rewriting it would mean:** This isn't recovery — it's net-new test code. Make the gate timeout configurable on `JobStreamState` (a `Duration` field) so tests can pass a short value like 500ms, write a stub `TruthBody` that pauses for a gate, add two integration tests in `helm-governed-jobs/tests/` driving rejection and timeout to completion via `EventHubHandle::subscribe_with_cursor`. About 2-3 hours.
+
+**Why it matters:** The gate is the spine of HITL governance. If gate-rejected doesn't actually emit `gate.rejected` → `job.failed`, the operator's "no" silently becomes a "yes" or a stall — exactly the failure mode HITL is meant to prevent. Untested gate paths mean unverifiable governance claims.
+
+**Why it might be safe to forget:** The Phase 4b reviewer hand-traced the rewrite and signed off. If the live happy path works in `spike-1-smoke`, the reject and timeout branches are likely fine — the risk is undetected regression in future edits, not a known live bug.
 
 **What we know:** Smoke validates only the happy path (job starts, gate pauses, approval-approved, job completes). Phase 4b's HITL flow rewrite was claimed to preserve gate-rejected and timeout behavior, but neither path is tested.
 
