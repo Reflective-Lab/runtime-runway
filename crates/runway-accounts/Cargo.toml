@@ -8,9 +8,9 @@ license.workspace = true
 
 [dependencies]
 commerce-rails-stripe.workspace = true
-runway-auth = { path = "../runway-auth" }
-runway-secrets = { path = "../runway-secrets" }
-runway-storage = { path = "../runway-storage" }
+runway-auth = { path = "../runway-auth", version = "3.4.2" }
+runway-secrets = { path = "../runway-secrets", version = "3.4.2" }
+runway-storage = { path = "../runway-storage", version = "3.4.2" }
 
 anyhow.workspace = true
 async-trait.workspace = true

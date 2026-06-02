@@ -7,7 +7,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-runway-storage = { path = "../runway-storage" }
+runway-storage = { path = "../runway-storage", version = "3.4.2" }
 
 anyhow = { workspace = true }
 async-trait = { workspace = true }

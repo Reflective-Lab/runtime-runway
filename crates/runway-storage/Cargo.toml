@@ -7,7 +7,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-runway-secrets = { path = "../runway-secrets" }
+runway-secrets = { path = "../runway-secrets", version = "3.4.2" }
 
 anyhow = { workspace = true }
 async-trait = { workspace = true }
@@ -26,7 +26,7 @@ uuid = { workspace = true }
 zeroize = { workspace = true }
 
 [dev-dependencies]
-runway-storage-contract = { path = "../runway-storage-contract" }
+runway-storage-contract = { path = "../runway-storage-contract", version = "3.4.2" }
 tempfile = "3"
 
 [features]

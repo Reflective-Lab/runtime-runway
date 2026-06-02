@@ -45,13 +45,13 @@ converge-storage = { git = "https://github.com/Reflective-Lab/converge", tag = "
 converge-llm = { path = "crates/llm" }
 converge-application = { path = "crates/application" }
 commerce-rails-stripe = { path = "../commerce-rails/crates/commerce-rails-stripe" }
-runway-accounts = { path = "crates/runway-accounts" }
-runway-app-host = { path = "crates/runway-app-host" }
-runway-auth = { path = "crates/runway-auth" }
-runway-middleware = { path = "crates/runway-middleware" }
-runway-secrets = { path = "crates/runway-secrets" }
-runway-storage = { path = "crates/runway-storage" }
-runway-telemetry = { path = "crates/runway-telemetry" }
+runway-accounts = { path = "crates/runway-accounts", version = "3.4.2" }
+runway-app-host = { path = "crates/runway-app-host", version = "3.4.2" }
+runway-auth = { path = "crates/runway-auth", version = "3.4.2" }
+runway-middleware = { path = "crates/runway-middleware", version = "3.4.2" }
+runway-secrets = { path = "crates/runway-secrets", version = "3.4.2" }
+runway-storage = { path = "crates/runway-storage", version = "3.4.2" }
+runway-telemetry = { path = "crates/runway-telemetry", version = "3.4.2" }
 
 # Shared dependencies (versions aligned with converge workspace)
 anyhow = "1"

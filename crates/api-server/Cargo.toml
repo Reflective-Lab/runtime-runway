@@ -12,12 +12,12 @@ path = "src/main.rs"
 
 [dependencies]
 commerce-rails-stripe = { workspace = true }
-runway-accounts = { path = "../runway-accounts" }
-runway-auth = { path = "../runway-auth" }
-runway-middleware = { path = "../runway-middleware" }
-runway-secrets = { path = "../runway-secrets" }
-runway-storage = { path = "../runway-storage" }
-runway-telemetry = { path = "../runway-telemetry" }
+runway-accounts = { path = "../runway-accounts", version = "3.4.2" }
+runway-auth = { path = "../runway-auth", version = "3.4.2" }
+runway-middleware = { path = "../runway-middleware", version = "3.4.2" }
+runway-secrets = { path = "../runway-secrets", version = "3.4.2" }
+runway-storage = { path = "../runway-storage", version = "3.4.2" }
+runway-telemetry = { path = "../runway-telemetry", version = "3.4.2" }
 
 anyhow = { workspace = true }
 axum = { workspace = true }
