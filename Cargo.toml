@@ -44,7 +44,7 @@ converge-storage = { git = "https://github.com/Reflective-Lab/converge", tag = "
 # Internal
 converge-llm = { path = "crates/llm" }
 converge-application = { path = "crates/application" }
-commerce-rails-stripe = { path = "../commerce-rails/crates/commerce-rails-stripe" }
+commerce-rails-stripe = { path = "../commerce-rails/crates/commerce-rails-stripe", version = "0.1.2" }
 runway-accounts = { path = "crates/runway-accounts", version = "3.4.2" }
 runway-app-host = { path = "crates/runway-app-host", version = "3.4.2" }
 runway-auth = { path = "crates/runway-auth", version = "3.4.2" }
