@@ -1,4 +1,4 @@
-# Runway Storage Contract Tests Implementation Plan
+# Runtime Runway Storage Contract Tests Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -63,7 +63,7 @@
 - [ ] **Step 1: Confirm clean working tree**
 
 ```bash
-cd /Users/kpernyer/dev/reflective/runway
+cd /Users/kpernyer/dev/reflective/runtime-runway
 git status
 ```
 
@@ -94,13 +94,13 @@ Expected: both pass. If they don't, STOP and address before continuing — this 
 In `crates/runway-storage/Cargo.toml`, change:
 
 ```toml
-description = "Shared storage abstraction for Runway apps — local (SQLite + LanceDB) and remote (Firestore + GCS + Vertex AI)"
+description = "Shared storage abstraction for Runtime Runway apps — local (SQLite + LanceDB) and remote (Firestore + GCS + Vertex AI)"
 ```
 
 to:
 
 ```toml
-description = "Shared storage abstraction for Runway apps — local (redb + local FS + fastembed) and remote (Firestore + GCS + Vertex AI)"
+description = "Shared storage abstraction for Runtime Runway apps — local (redb + local FS + fastembed) and remote (Firestore + GCS + Vertex AI)"
 ```
 
 - [ ] **Step 2: Fix `lib.rs` `local()` doc**

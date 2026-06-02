@@ -95,7 +95,7 @@ expected       = HMAC-SHA256(STRIPE_WEBHOOK_SECRET, signed_payload)
 - Comparison: constant-time byte-by-byte XOR fold (no early exit)
 
 Commerce Rails owns the Stripe adapter code that performs signature mechanics,
-provider receipt construction, and event mapping. Runway owns the public route
+provider receipt construction, and event mapping. Runtime Runway owns the public route
 and passes the raw signed payload to that Commerce Rails-owned adapter.
 
 **Critical:** if `STRIPE_WEBHOOK_SECRET` is empty or unset, signature

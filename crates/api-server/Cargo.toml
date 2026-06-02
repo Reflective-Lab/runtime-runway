@@ -1,6 +1,6 @@
 [package]
 name = "api-server"
-description = "Runway reference Cloud Run server — wires all five runway-* crates"
+description = "Runtime Runway reference Cloud Run server — wires all five runway-* crates"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

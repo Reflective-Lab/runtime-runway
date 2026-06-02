@@ -1,9 +1,10 @@
 ---
 source: llm
 ---
-# Reflective Runway
+# Reflective Runtime Runway
 
-Distribution, deployment, and infrastructure for the Converge stack. Separated from converge on 2026-04-19 to keep the SDK pure.
+Distribution, deployment, and infrastructure for apps that embed the Converge
+stack. Separated from converge on 2026-04-19 to keep the SDK pure.
 
 ## What lives here
 
@@ -17,7 +18,9 @@ Distribution, deployment, and infrastructure for the Converge stack. Separated f
 
 ## Principles
 
-- Runway **consumes** converge crates, never contributes to the SDK
+- Runtime Runway **consumes** converge crates, never contributes to the SDK
+- The standalone `converge-runtime` service is retired as the canonical runtime;
+  legacy scripts are compatibility checks only
 - Infrastructure is imperative scripts today, IaC later
 - GPU workers are separated from the main runtime
 - Everything proprietary (`LicenseRef-Proprietary`, `publish = false`)
@@ -34,5 +37,5 @@ Distribution, deployment, and infrastructure for the Converge stack. Separated f
 
 - [[Building/Deployment]] — full deployment guide
 - [[Architecture/Crate Map]] — what crates live here and their deps
-- [[Architecture/App Execution Container]] — standard Runway host for Helm and marquee apps
-- Converge SDK: `~/dev/reflective/stack/bedrock-platform/converge/kb/`
+- [[Architecture/App Execution Container]] — standard Runtime Runway host for Helm and marquee apps
+- Converge SDK: `~/dev/reflective/bedrock-platform/converge/kb/`

@@ -194,7 +194,7 @@ impl OperatorPacketRegistration {
 }
 
 /// How much authority a packet's receipts carry, declared by the app at deploy time.
-/// Runway expresses coarse INTENT here; Helm receipt-family telemetry stays richer.
+/// Runtime Runway expresses coarse INTENT here; Helm receipt-family telemetry stays richer.
 ///
 /// Apps declare the *maximum* authority the packet can carry; a packet with mixed
 /// receipts declares its worst case. Detailed audit flows through Helm.
@@ -323,7 +323,7 @@ impl BoundaryRegistration {
 pub enum ContractLayer {
     Axiom,
     Helm,
-    Runway,
+    RuntimeRunway,
     App,
     CommerceRails,
 }
@@ -470,7 +470,7 @@ mod tests {
                 ),
             )
             .with_boundary(BoundaryRegistration::new(
-                ContractLayer::Runway,
+                ContractLayer::RuntimeRunway,
                 vec!["host".to_string()],
                 BoundaryStatus::Mounted,
             ));
@@ -485,7 +485,7 @@ mod tests {
             packet.mounted_modules[0].routes[0].owner,
             RouteOwner::HelmModule
         );
-        assert_eq!(packet.boundaries[0].layer, ContractLayer::Runway);
+        assert_eq!(packet.boundaries[0].layer, ContractLayer::RuntimeRunway);
     }
 
     #[test]
@@ -580,7 +580,7 @@ mod tests {
                 ],
                 "boundaries": [
                     {
-                        "layer": "runway",
+                        "layer": "runtime-runway",
                         "owns": ["host"],
                         "consumes": [],
                         "status": "planned"

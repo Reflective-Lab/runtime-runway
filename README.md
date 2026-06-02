@@ -1,21 +1,24 @@
-# Reflective Runway
+# Reflective Runtime Runway
 
 Distribution, deployment, and infrastructure for the [Converge](https://github.com/Reflective-Lab/converge) stack.
 
-Runway owns everything needed to **run, package, and deploy** Converge. The SDK stays pure; Runway handles the messy reality of binaries, containers, GPUs, and cloud services.
+Runtime Runway owns everything needed to **run, package, and deploy** Reflective
+apps that embed Converge. The Converge SDK stays pure; Runtime Runway handles
+the messy reality of binaries, containers, GPUs, app hosts, auth, storage,
+secrets, telemetry, and cloud services.
 
 ## Relationship to Commerce Rails
 
-Runway and [Commerce Rails](../commerce-rails/) are sibling authorities with a clean boundary:
+Runtime Runway and [Commerce Rails](../commerce-rails/) are sibling authorities with a clean boundary:
 
 | Question | Owner |
 |---|---|
-| Who can log in? Where does code run? Where do secrets live? | **Runway** |
+| Who can log in? Where does code run? Where do secrets live? | **Runtime Runway** |
 | Who pays? What is owed? What is granted? What must be reconciled? | **Commerce Rails** |
 
-Runway owns canonical users, orgs, auth, membership, deployments, secrets, and runtime substrate. Commerce Rails owns subscriptions, entitlements, billing, revenue-share, payouts, and reconciliation.
+Runtime Runway owns canonical users, orgs, auth, membership, deployments, secrets, and runtime substrate. Commerce Rails owns subscriptions, entitlements, billing, revenue-share, payouts, and reconciliation.
 
-Stripe crosses both: Runway routes the webhook, holds the signing secret, and provides runtime observability. Commerce Rails verifies the provider semantics, records receipts, and decides commercial state.
+Stripe crosses both: Runtime Runway routes the webhook, holds the signing secret, and provides runtime observability. Commerce Rails verifies the provider semantics, records receipts, and decides commercial state.
 
 See [`kb/Architecture/Commerce Rails Boundary.md`](kb/Architecture/Commerce%20Rails%20Boundary.md) for the full authority table.
 
@@ -23,14 +26,14 @@ See [`kb/Architecture/Commerce Rails Boundary.md`](kb/Architecture/Commerce%20Ra
 
 ## A New World
 
-The old world shipped instructions; the new world ships intent-driven, governed runtimes. Models and orchestration turn declared intent into decisions at runtime — but only if the runtime, the providers, the GPUs, and the deployment surface actually exist in the messy real world. Runway owns that messy world.
+The old world shipped instructions; the new world ships intent-driven, governed runtimes. Models and orchestration turn declared intent into decisions at runtime — but only if the runtime, the providers, the GPUs, and the deployment surface actually exist in the messy real world. Runtime Runway owns that messy world.
 
-**Why it matters.** A doctrine of safe runtime intent resolution requires a runtime that can actually be deployed, run, and reasoned about on real hardware. Runway is the boundary between the pure SDK upstairs and the binaries, containers, and GPUs that make the rest of the stack real.
+**Why it matters.** A doctrine of safe runtime intent resolution requires a runtime that can actually be deployed, run, and reasoned about on real hardware. Runtime Runway is the boundary between the pure SDK upstairs and the binaries, containers, and GPUs that make the rest of the stack real.
 
 ## Architecture
 
 ```
-reflective/runway/
+reflective/runtime-runway/
   crates/
     application/        The `converge` CLI/TUI binary
     llm/                Local LLM inference (Burn, llama.cpp)
@@ -77,15 +80,15 @@ Suggestors, and domain logic receive a `StorageKit` and never care which backend
 
 ### Dependency Direction
 
-Runway **consumes** Converge crates via path — never the reverse.
+Runtime Runway **consumes** Converge crates via path — never the reverse.
 
 ```
-reflective/runway/crates/application  ──>  converge/crates/{core, experience, provider, ...}
-reflective/runway/crates/llm          ──>  converge/crates/{core, domain, provider, storage}
-reflective/runway/crates/runway-*     ──>  (no converge dependency — standalone infra crates)
+reflective/runtime-runway/crates/application  ──>  converge/crates/{core, experience, provider, ...}
+reflective/runtime-runway/crates/llm          ──>  converge/crates/{core, domain, provider, storage}
+reflective/runtime-runway/crates/runway-*     ──>  (no converge dependency — standalone infra crates)
 ```
 
-Local SDK work expects Converge at `~/dev/reflective/stack/bedrock-platform/converge`.
+Local SDK work expects Converge at `~/dev/reflective/bedrock-platform/converge`.
 
 ## Crates
 
@@ -159,7 +162,7 @@ Routes (all under `runway_accounts::protected_routes()`, behind `AuthLayer`):
 
 The Stripe webhook (`/v1/billing/webhooks/stripe`) is public, HMAC-verified internally, and mounted via `runway_accounts::public_routes()`.
 
-**Runway owns identity and transport.** The commercial meaning of subscription events — what the org is entitled to, revenue-share, payout — belongs to [Commerce Rails](../commerce-rails/).
+**Runtime Runway owns identity and transport.** The commercial meaning of subscription events — what the org is entitled to, revenue-share, payout — belongs to [Commerce Rails](../commerce-rails/).
 
 ### runway-auth
 
@@ -180,6 +183,18 @@ GCP Secret Manager client. Secrets are named `{env}-{app}-{key}`. All values hel
 
 OpenTelemetry → Cloud Trace (OTLP/HTTP), Sentry error tracking, JSON structured logging → Cloud Logging.
 Returns a `TelemetryGuard` that shuts down the tracer provider on drop.
+
+## Runtime Ownership
+
+The standalone `converge-runtime` service is retired as the canonical deployed
+runtime. It remains available only as a legacy compatibility shell for old
+smoke tests and scripts. Current services should deploy through Runtime
+Runway's app-host/app-backend path, such as `api-server` or a thin application
+backend.
+
+The old `deploy-cloud-run` script is guarded by
+`ALLOW_LEGACY_CONVERGE_RUNTIME_DEPLOY=true` so accidental deployments of the
+retired service fail fast.
 
 ## Building
 
@@ -208,7 +223,8 @@ cd docker && docker compose up                          # containerized
 
 | Target | Method | Status |
 |--------|--------|--------|
-| Google Cloud Run (runtime) | `just deploy-cloud-run` | Script-based |
+| Google Cloud Run (api-server/app backend) | `just api-deploy` or app deploy recipe | Current |
+| Google Cloud Run (legacy converge-runtime) | `ALLOW_LEGACY_CONVERGE_RUNTIME_DEPLOY=true just deploy-cloud-run` | Retired compatibility only |
 | Google Cloud Run (GPU) | `ops/deploy/gpu/cloudrun/deploy.sh` | Script-based |
 | RunPod (GPU) | `ops/deploy/gpu/runpod/` | Dockerfile ready |
 | Modal (GPU) | `ops/deploy/gpu/modal/` | Stub |
@@ -230,16 +246,16 @@ PROJECT_ID=my-project ./ops/deploy/gpu/cloudrun/deploy.sh
 ```bash
 just focus          # session opener — repo health
 just sync           # PRs, issues, build status
-just dev-up         # start local runtime
-just smoke-test     # verify health
-just dev-down       # stop runtime
+just dev-up         # start legacy local converge-runtime compatibility shell
+just smoke-test     # verify legacy shell health
+just dev-down       # stop legacy shell
 ```
 
 See the [knowledge base](kb/Home.md) for full documentation.
 
 ## Design Principles
 
-- Runway **consumes** Converge crates, never contributes to the SDK
+- Runtime Runway **consumes** Converge crates, never contributes to the SDK
 - `unsafe` code is forbidden (`unsafe_code = "forbid"`)
 - Infrastructure is imperative scripts today, IaC later
 - GPU workers are separated from the main runtime

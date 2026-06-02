@@ -92,7 +92,7 @@ pub async fn create_checkout(
         .ensure_customer(ctx.uid(), ctx.claims.email.as_deref())
         .await?;
 
-    // Store the provider customer reference on the Runway org mirror so webhook
+    // Store the provider customer reference on the Runtime Runway org mirror so webhook
     // ingress can resolve the identity container without calling Commerce Rails.
     if let Some(org_id) = &account.org_id
         && let Ok(Some(mut org)) = state.store.get_org(org_id).await

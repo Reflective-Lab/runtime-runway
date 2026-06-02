@@ -97,7 +97,7 @@ echo "Registering in apps portal..."
 bash "$ROOT_DIR/ops/scripts/register-app.sh" \
     --key         "api-server" \
     --name        "API Server" \
-    --description "Runway reference service — auth, storage, telemetry" \
+    --description "Runtime Runway reference service — auth, storage, telemetry" \
     --path        "$ROUTE_PREFIX" \
     --status-path "${ROUTE_PREFIX}/status" \
     --version     "$CARGO_VERSION" \

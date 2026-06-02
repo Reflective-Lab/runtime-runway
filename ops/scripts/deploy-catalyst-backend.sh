@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Deploy catalyst-backend to Cloud Run.
 #
-# catalyst-backend has path deps on runway crates (../../../runway/crates/).
+# catalyst-backend has path deps on Runtime Runway crates (../../../runtime-runway/crates/).
 # Cloud Build can't access sibling repos, so this script stages both trees
 # under a common root that matches the relative path structure before submitting.
 #
 # Staged layout:
 #   staging/
-#     runway/crates/        ← runway infra crates
+#     runtime-runway/crates/        ← Runtime Runway infra crates
 #     marquee-apps/catalyst-biz/   ← catalyst source
 #     Dockerfile
 #     cloudbuild.yaml
@@ -48,12 +48,12 @@ echo ""
 STAGING="$(mktemp -d "${TMPDIR:-/tmp}/runway-catalyst-build.XXXXXX")"
 trap 'rm -rf "$STAGING"' EXIT
 
-# Stage runway workspace (crates + workspace Cargo.toml + Cargo.lock so
+# Stage Runtime Runway workspace (crates + workspace Cargo.toml + Cargo.lock so
 # workspace.package inheritance resolves inside the Cloud Build container)
-mkdir -p "$STAGING/runway"
-cp "$ROOT_DIR/Cargo.toml" "$STAGING/runway/Cargo.toml"
-cp "$ROOT_DIR/Cargo.lock" "$STAGING/runway/Cargo.lock"
-cp -R "$ROOT_DIR/crates" "$STAGING/runway/crates"
+mkdir -p "$STAGING/runtime-runway"
+cp "$ROOT_DIR/Cargo.toml" "$STAGING/runtime-runway/Cargo.toml"
+cp "$ROOT_DIR/Cargo.lock" "$STAGING/runtime-runway/Cargo.lock"
+cp -R "$ROOT_DIR/crates" "$STAGING/runtime-runway/crates"
 
 # Stage catalyst-biz (exclude build artifacts and node_modules)
 mkdir -p "$STAGING/marquee-apps"
@@ -68,13 +68,13 @@ rsync -a \
 
 # Dockerfile — WORKDIR matches the path dep structure:
 #   /build/marquee-apps/catalyst-biz/backend/Cargo.toml
-#   path = "../../../runway/crates/runway-auth"
-#   resolves to /build/runway/crates/runway-auth ✓
+#   path = "../../../runtime-runway/crates/runway-auth"
+#   resolves to /build/runtime-runway/crates/runway-auth ✓
 cat > "$STAGING/Dockerfile" << 'DOCKERFILE'
 FROM rust:1.94-bookworm AS builder
 
 WORKDIR /build
-COPY runway/ runway/
+COPY runtime-runway/ runtime-runway/
 COPY marquee-apps/ marquee-apps/
 
 WORKDIR /build/marquee-apps/catalyst-biz
@@ -116,7 +116,7 @@ CLOUDBUILD
 
 gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
 
-echo "Building image via Cloud Build (staging both runway crates + catalyst-biz)..."
+echo "Building image via Cloud Build (staging both Runtime Runway crates + catalyst-biz)..."
 gcloud builds submit "$STAGING" \
     --config="$STAGING/cloudbuild.yaml" \
     --substitutions="_IMAGE_URI=${IMAGE_URI}" \

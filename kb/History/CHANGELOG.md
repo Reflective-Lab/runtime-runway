@@ -3,10 +3,29 @@ source: llm
 ---
 # Changelog
 
+## 2026-06-02 — Standalone Converge runtime retired
+
+- Marked `converge-runtime` as a legacy compatibility shell, not the canonical
+  Reflective stack runtime.
+- Guarded `ops/scripts/deploy-cloud-run.sh` with
+  `ALLOW_LEGACY_CONVERGE_RUNTIME_DEPLOY=true` so accidental Cloud Run deploys
+  of the retired service fail fast.
+- Updated local legacy runtime paths to the current
+  `bedrock-platform/converge` checkout.
+- Kept `dev-up`, Docker compose, and smoke-test paths as compatibility checks
+  while current app services move through `api-server`, `runway-app-host`, or
+  app-specific backends.
+
+## 2026-05-30 — Runtime Runway workspace rename
+
+- Renamed the local workspace from `runway/` to `runtime-runway/` to match the alias-purpose naming convention.
+- Updated docs, deployment staging paths, and sibling Cargo path dependencies that point at Runtime Runway crates.
+- Kept the `runway-*` crate names unchanged as stable package/API identifiers.
+
 ## 2026-05-28 — Stripe billing boundary moved to Commerce Rails
 
 - Removed the local Stripe client from `runway-accounts`.
-- Runway now keeps billing HTTP routes, auth context, and the org entitlement mirror, then calls the Commerce Rails-owned `commerce-rails-stripe` adapter for provider config, Stripe API calls, webhook signature mechanics, receipt construction, and event mapping.
+- Runtime Runway now keeps billing HTTP routes, auth context, and the org entitlement mirror, then calls the Commerce Rails-owned `commerce-rails-stripe` adapter for provider config, Stripe API calls, webhook signature mechanics, receipt construction, and event mapping.
 - `api-server` delegates commercial provider config to `CommerceRailsConfig` instead of carrying Stripe config fields directly.
 
 ## 2026-05-11 — api-server deployment spike
@@ -47,21 +66,21 @@ Quality: `just lint` (fmt + clippy pedantic) passes clean on all five crates.
 
 ## 2026-04-19 — Converge dependency pinning
 
-- Runway now pins Converge library crates to GitHub tag `v3.4.0` by default instead of always reading sibling path dependencies.
+- Runtime Runway now pins Converge library crates to GitHub tag `v3.4.0` by default instead of always reading sibling path dependencies.
 - Local SDK work now uses an untracked Cargo patch override (`.cargo/config.toml`) generated from `.cargo/config.toml.example`.
-- Runtime helper scripts now read runtime source from `~/dev/reflective/stack/bedrock-platform/converge` or `CONVERGE_ROOT`.
+- Runtime helper scripts now read runtime source from `~/dev/reflective/bedrock-platform/converge` or `CONVERGE_ROOT`.
 - All tracked cross-repo dependencies now resolve through GitHub pins, while local sibling overrides remain opt-in and untracked.
 - Quality stamp: `just lint`, `just check`, and `just test` all passed on 2026-04-19 before tagging `v3.4.0`.
 
 ## 2026-04-19 — Initial split from converge
 
-Runway created by extracting distribution and infrastructure from the converge repo:
+Runtime Runway created by extracting distribution and infrastructure from the converge repo:
 
 - `crates/application` — the `converge` CLI/TUI binary (was `converge/crates/application`)
 - `crates/llm` — local LLM inference (was `converge/dev/llm`)
 - `docker/` — container definitions (was `converge/dev/docker`)
 - `ops/` — deployment scripts and GPU infra (was `converge/ops`)
 
-Converge stays as a pure SDK/runtime library. Runway owns everything needed to run, package, and deploy.
+Converge stays as a pure SDK/runtime library. Runtime Runway owns everything needed to run, package, and deploy.
 
-Runway initially depended on converge crates via sibling path (`../converge/crates/...`).
+Runtime Runway initially depended on converge crates via sibling path (`../converge/crates/...`).

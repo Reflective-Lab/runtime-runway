@@ -1,6 +1,6 @@
 [package]
 name = "runway-app-host"
-description = "Runway app execution container packet and host bootstrap"
+description = "Runtime Runway app execution container packet and host bootstrap"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

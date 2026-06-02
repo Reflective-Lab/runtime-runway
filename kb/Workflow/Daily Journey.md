@@ -3,7 +3,7 @@ source: llm
 ---
 # Daily Journey
 
-Session workflow cheat sheet for Runway.
+Session workflow cheat sheet for Runtime Runway.
 
 ## Morning
 

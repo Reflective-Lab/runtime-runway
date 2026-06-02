@@ -3,7 +3,7 @@ source: llm
 ---
 # Crate Map
 
-Runway hosts two categories of crates: Converge distribution crates (application and LLM) and the shared infrastructure crates (`runway-*`). The runway-* crates have no Converge dependency — they are standalone infra primitives reused by all Reflective apps.
+Runtime Runway hosts two categories of crates: Converge distribution crates (application and LLM) and the shared infrastructure crates (`runway-*`). The runway-* crates have no Converge dependency — they are standalone infra primitives reused by all Reflective apps.
 
 `api-server` is the reference binary that wires all five runway-* crates together and proves the Cloud Run deployment path.
 `runway-app-host` is the reusable execution-container packet and host bootstrap
@@ -33,10 +33,10 @@ runway-telemetry         → opentelemetry, sentry, tracing          OTel → Cl
 ## Dependency direction
 
 ```
-reflective/runway/crates/api-server   ──→  runway-{storage, auth, middleware, secrets, telemetry}
-reflective/runway/crates/application  ──→  converge/crates/{core, experience, provider, ...}
-reflective/runway/crates/llm          ──→  converge/crates/{core, domain, provider, storage}
-reflective/runway/crates/runway-*     ──→  (no converge dependency)
+reflective/runtime-runway/crates/api-server   ──→  runway-{storage, auth, middleware, secrets, telemetry}
+reflective/runtime-runway/crates/application  ──→  converge/crates/{core, experience, provider, ...}
+reflective/runtime-runway/crates/llm          ──→  converge/crates/{core, domain, provider, storage}
+reflective/runtime-runway/crates/runway-*     ──→  (no converge dependency)
 ```
 
 ## runway-* crate reference
@@ -44,7 +44,7 @@ reflective/runway/crates/runway-*     ──→  (no converge dependency)
 ### runway-accounts
 
 User, organisation, and billing mirror management. Stripe provider behavior lives
-in Commerce Rails; Runway keeps the HTTP route and identity-side mirror.
+in Commerce Rails; Runtime Runway keeps the HTTP route and identity-side mirror.
 Exposed as two router bundles:
 
 ```rust
@@ -142,7 +142,7 @@ let _guard = runway_telemetry::init(TelemetryConfig::from_env("api-server"))?;
 | `storage` | Remote adapter registry |
 | `anthropic` | Anthropic provider bridge |
 
-Runway pins Converge dependencies to Git tag `v3.4.0` by default.
-For local SDK work: `just use-local-converge` → patches to `../reflective/stack/bedrock-platform/converge`.
+Runtime Runway pins Converge dependencies to Git tag `v3.4.0` by default.
+For local SDK work: `just use-local-converge` → patches to `../reflective/bedrock-platform/converge`.
 
 See also: [[Building/Deployment]], [[Stack/Burn and Local LLM]], converge `kb/Architecture/Crate Map`

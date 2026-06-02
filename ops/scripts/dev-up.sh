@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CONVERGE_ROOT="${CONVERGE_ROOT:-$ROOT_DIR/../stack/bedrock-platform/converge}"
+CONVERGE_ROOT="${CONVERGE_ROOT:-$ROOT_DIR/../bedrock-platform/converge}"
 STATE_DIR="$ROOT_DIR/.converge"
 PID_FILE="$STATE_DIR/runtime.pid"
 LOG_FILE="$STATE_DIR/runtime.log"
@@ -15,7 +15,7 @@ mkdir -p "$STATE_DIR"
 require_converge_root() {
   if [[ ! -f "$CONVERGE_ROOT/Cargo.toml" ]]; then
     echo "Converge source not found at $CONVERGE_ROOT" >&2
-    echo "Set CONVERGE_ROOT or check out ~/dev/reflective/stack/bedrock-platform/converge." >&2
+    echo "Set CONVERGE_ROOT or check out ~/dev/reflective/bedrock-platform/converge." >&2
     exit 1
   fi
 }
@@ -62,7 +62,7 @@ start_native() {
     return 0
   fi
 
-  echo "Starting converge-runtime from ${CONVERGE_ROOT} in native mode on port ${PORT}"
+  echo "Starting legacy converge-runtime compatibility shell from ${CONVERGE_ROOT} in native mode on port ${PORT}"
   (
     cd "$CONVERGE_ROOT"
     nohup env PORT="$PORT" \
@@ -95,7 +95,7 @@ start_container() {
   }
   require_converge_root
 
-  echo "Starting converge-runtime in container mode with: $compose"
+  echo "Starting legacy converge-runtime compatibility shell in container mode with: $compose"
   (
     cd "$ROOT_DIR/docker"
     CONVERGE_ROOT="$CONVERGE_ROOT" \

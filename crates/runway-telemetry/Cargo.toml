@@ -1,6 +1,6 @@
 [package]
 name = "runway-telemetry"
-description = "OpenTelemetry + Sentry + structured logging bootstrap for all Runway services"
+description = "OpenTelemetry + Sentry + structured logging bootstrap for all Runtime Runway services"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

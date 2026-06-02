@@ -1,8 +1,8 @@
 services:
   converge-runtime:
     build:
-      context: ${CONVERGE_ROOT:-../../stack/bedrock-platform/converge}
-      dockerfile: ${RUNWAY_DOCKERFILE:-../../../runway/docker/Dockerfile}
+      context: ${CONVERGE_ROOT:-../../bedrock-platform/converge}
+      dockerfile: ${RUNWAY_DOCKERFILE:-../../../runtime-runway/docker/Dockerfile}
       args:
         CONVERGE_RUNTIME_FEATURES: "${CONVERGE_RUNTIME_FEATURES:-gcp,auth,firebase}"
     image: converge-runtime:dev

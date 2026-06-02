@@ -48,7 +48,7 @@
 
 - [ ] **A1: Recover the pre-deletion file from git**
   ```bash
-  cd /Users/kpernyer/dev/reflective/stack/bedrock-platform/helms
+  cd /Users/kpernyer/dev/reflective/bedrock-platform/helms
   git show af4cd23^:crates/application-server/src/http_api.rs > /tmp/old-http-api.rs
   wc -l /tmp/old-http-api.rs    # expect ~2,302
   ```
@@ -114,7 +114,7 @@
 
 - [ ] **B1: Recover the pre-deletion service.rs**
   ```bash
-  cd /Users/kpernyer/dev/reflective/stack/bedrock-platform/helms
+  cd /Users/kpernyer/dev/reflective/bedrock-platform/helms
   git show af4cd23^:crates/application-server/src/service.rs > /tmp/old-service.rs
   ```
 
@@ -123,7 +123,7 @@
 - [ ] **B3: Grep frontend code for any of the gRPC service client paths.** The `apps/desktop/src-tauri/` directory in helms likely has Rust clients. The Tauri/Svelte frontend may have gRPC-web clients.
   ```bash
   rg -l "IdentityService|TruthCatalogService|ModuleRegistryService" \
-    /Users/kpernyer/dev/reflective/stack/bedrock-platform/helms/apps/ \
+    /Users/kpernyer/dev/reflective/bedrock-platform/helms/apps/ \
     /Users/kpernyer/dev/reflective/marquee-apps/ \
     2>/dev/null
   ```
@@ -169,7 +169,7 @@ The user has separately landed `commerce-rails/crates/commerce-rails-stripe` (re
 
 - [ ] **C1: Recover the 5 truth bodies from git**
   ```bash
-  cd /Users/kpernyer/dev/reflective/stack/bedrock-platform/helms
+  cd /Users/kpernyer/dev/reflective/bedrock-platform/helms
   git show a63811c^:crates/application-server/src/truth_runtime/activate_subscription.rs > /tmp/activate_subscription.rs
   # repeat for the other 4 files
   ```
@@ -230,8 +230,8 @@ The user has separately landed `commerce-rails/crates/commerce-rails-stripe` (re
 - [ ] **D2: Search KB and experiments dirs for "EXP-002" or "data_transformer"**
   ```bash
   rg -l "EXP-002|data_transformer|data transformer" \
-    /Users/kpernyer/dev/reflective/stack/bedrock-platform/helms/kb/ \
-    /Users/kpernyer/dev/reflective/stack/bedrock-platform/helms/experiments/ \
+    /Users/kpernyer/dev/reflective/bedrock-platform/helms/kb/ \
+    /Users/kpernyer/dev/reflective/bedrock-platform/helms/experiments/ \
     2>/dev/null
   ```
 

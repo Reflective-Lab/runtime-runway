@@ -3,7 +3,7 @@
     {
       "key": "api-server",
       "name": "API Server",
-      "description": "Runway reference service \u2014 auth, storage, telemetry",
+      "description": "Runtime Runway reference service \u2014 auth, storage, telemetry",
       "path": "/api-server",
       "status_path": "/api-server/status",
       "version": "3.4.1",

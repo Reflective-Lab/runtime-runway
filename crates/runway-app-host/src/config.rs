@@ -1,5 +1,5 @@
 //! Runtime configuration for the app-host (the binary container that
-//! runs a Runway app inside Cloud Run or locally).
+//! runs a Runtime Runway app inside Cloud Run or locally).
 
 use crate::AppExecutionPacket;
 

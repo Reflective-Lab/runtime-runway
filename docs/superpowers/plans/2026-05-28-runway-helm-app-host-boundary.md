@@ -1,8 +1,8 @@
-# Runway/Helm App-Host Boundary Implementation Plan
+# Runtime Runway/Helm App-Host Boundary Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Land the canonical app execution container across Runway, Helm, and a thin app — proving it end-to-end with Catalyst on Cloud Run.
+**Goal:** Land the canonical app execution container across Runtime Runway, Helm, and a thin app — proving it end-to-end with Catalyst on Cloud Run.
 
 **Architecture:** runway-app-host grows a `HelmModule` trait + `HostContext` + `EventHub` so apps mount Helm-provided modules at startup. Helm's monolithic `application-server` is decomposed into per-module crates (`helm-operator-control`, `helm-governed-jobs`, `helm-truth-execution`) and then deleted. CRM showcase code is relocated to a new `stack/atelier-showcase` workspace. Catalyst gets a thin backend binary deployed to Cloud Run.
 
@@ -14,7 +14,7 @@
 
 ## File Structure Map
 
-### `runway/crates/runway-app-host/` — extended (Phase 1)
+### `runtime-runway/crates/runway-app-host/` — extended (Phase 1)
 
 | File | Status | Responsibility |
 |---|---|---|
@@ -84,7 +84,7 @@ stack/atelier-showcase/
 | File | Status |
 |---|---|
 | `backend/Cargo.toml` | Modify — add runway-app-host, helm-* module deps |
-| `backend/src/main.rs` | Modify — replace stub with thin Runway-hosted main |
+| `backend/src/main.rs` | Modify — replace stub with thin Runtime Runway-hosted main |
 | `truths/Cargo.toml` | Create — Catalyst's truth bodies crate |
 | `truths/src/lib.rs` | Create — registers `score_inbound_fit`, `qualify_inbound_lead`, `schedule_strategic_meetings` |
 | `truths/src/score_inbound_fit.rs` | Move from `helms/.../truth_runtime/score_inbound_fit.rs` |
@@ -92,7 +92,7 @@ stack/atelier-showcase/
 | `truths/src/schedule_strategic_meetings.rs` | Move from `helms/.../truth_runtime/schedule_strategic_meetings.rs` |
 | `Cargo.toml` | Modify — add `truths` to workspace members |
 
-### `runway/ops/infra/terraform/catalyst-backend/` — new (Phase 10)
+### `runtime-runway/ops/infra/terraform/catalyst-backend/` — new (Phase 10)
 
 | File | Purpose |
 |---|---|
@@ -101,13 +101,13 @@ stack/atelier-showcase/
 | `variables.tf` | project_id, region, image_uri, env |
 | `outputs.tf` | service URL, SA email, image path |
 
-### `runway/` justfile + workflows (Phase 10)
+### `runtime-runway/` justfile + workflows (Phase 10)
 
 | File | Status |
 |---|---|
 | `Justfile` | Modify — add `deploy-catalyst`, `smoke-catalyst-cloud`, `catalyst-local` |
 | `marquee-apps/catalyst-biz/backend/Dockerfile` | Create — multistage distroless |
-| `runway/.github/workflows/deploy-catalyst.yml` | Create — tag-triggered build+deploy |
+| `runtime-runway/.github/workflows/deploy-catalyst.yml` | Create — tag-triggered build+deploy |
 
 ### Deletions (Phase 9)
 
@@ -126,11 +126,11 @@ stack/atelier-showcase/
 
 ### Task 1.1: Add new dependencies
 
-**Files:** `runway/crates/runway-app-host/Cargo.toml`
+**Files:** `runtime-runway/crates/runway-app-host/Cargo.toml`
 
 - [ ] **Step 1: Add deps to `[dependencies]`**
 
-Edit `runway/crates/runway-app-host/Cargo.toml`, append after the existing dependencies:
+Edit `runtime-runway/crates/runway-app-host/Cargo.toml`, append after the existing dependencies:
 
 ```toml
 async-trait = { workspace = true }
@@ -152,7 +152,7 @@ reqwest = { workspace = true }
 
 - [ ] **Step 3: Verify it compiles**
 
-Run from `runway/`:
+Run from `runtime-runway/`:
 ```bash
 cargo check -p runway-app-host
 ```
@@ -167,11 +167,11 @@ git commit -m "feat(runway-app-host): add deps for HelmModule, EventHub, gRPC"
 
 ### Task 1.2: Define `EventEnvelope`
 
-**Files:** Create `runway/crates/runway-app-host/src/realtime.rs`
+**Files:** Create `runtime-runway/crates/runway-app-host/src/realtime.rs`
 
 - [ ] **Step 1: Write the failing test**
 
-Add to `runway/crates/runway-app-host/src/realtime.rs`:
+Add to `runtime-runway/crates/runway-app-host/src/realtime.rs`:
 
 ```rust
 use chrono::{DateTime, Utc};
@@ -226,7 +226,7 @@ mod tests {
 }
 ```
 
-Add to `runway/crates/runway-app-host/src/lib.rs`:
+Add to `runtime-runway/crates/runway-app-host/src/lib.rs`:
 ```rust
 pub mod realtime;
 ```
@@ -247,7 +247,7 @@ git commit -m "feat(runway-app-host): add EventEnvelope shape"
 
 ### Task 1.3: Implement `EventHub` + `EventHubHandle`
 
-**Files:** Modify `runway/crates/runway-app-host/src/realtime.rs`
+**Files:** Modify `runtime-runway/crates/runway-app-host/src/realtime.rs`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -354,11 +354,11 @@ git commit -m "feat(runway-app-host): add EventHub broadcast primitive"
 
 ### Task 1.4: Define `TonicService` alias and `HelmModule` trait
 
-**Files:** Create `runway/crates/runway-app-host/src/module.rs`
+**Files:** Create `runtime-runway/crates/runway-app-host/src/module.rs`
 
 - [ ] **Step 1: Create file with trait**
 
-Write `runway/crates/runway-app-host/src/module.rs`:
+Write `runtime-runway/crates/runway-app-host/src/module.rs`:
 
 ```rust
 use std::sync::Arc;
@@ -404,7 +404,7 @@ This task is paired with 1.5 — verify after both are written.
 
 ### Task 1.5: Define `HostContext`
 
-**Files:** Create `runway/crates/runway-app-host/src/context.rs`
+**Files:** Create `runtime-runway/crates/runway-app-host/src/context.rs`
 
 - [ ] **Step 1: Write the file**
 
@@ -442,11 +442,11 @@ git commit -m "feat(runway-app-host): add HelmModule trait and HostContext"
 
 ### Task 1.6: Add `/healthz` route
 
-**Files:** Create `runway/crates/runway-app-host/src/health.rs`
+**Files:** Create `runtime-runway/crates/runway-app-host/src/health.rs`
 
 - [ ] **Step 1: Write the failing test**
 
-Append to `runway/crates/runway-app-host/src/health.rs`:
+Append to `runtime-runway/crates/runway-app-host/src/health.rs`:
 
 ```rust
 use axum::{Router, http::StatusCode, routing::get};
@@ -494,7 +494,7 @@ git commit -m "feat(runway-app-host): add /healthz route"
 
 ### Task 1.7: Implement SSE projection over the hub
 
-**Files:** Create `runway/crates/runway-app-host/src/sse.rs`
+**Files:** Create `runtime-runway/crates/runway-app-host/src/sse.rs`
 
 - [ ] **Step 1: Write the file**
 
@@ -589,7 +589,7 @@ git commit -m "feat(runway-app-host): mount canonical /sse/stream over hub"
 
 ### Task 1.8: Implement approvals routes
 
-**Files:** Create `runway/crates/runway-app-host/src/approvals.rs`
+**Files:** Create `runtime-runway/crates/runway-app-host/src/approvals.rs`
 
 - [ ] **Step 1: Write the file**
 
@@ -748,11 +748,11 @@ git commit -m "feat(runway-app-host): add HITL approvals transport routes"
 
 ### Task 1.9: Implement the builder, init order, and serve
 
-**Files:** Create `runway/crates/runway-app-host/src/builder.rs`; modify `src/lib.rs`
+**Files:** Create `runtime-runway/crates/runway-app-host/src/builder.rs`; modify `src/lib.rs`
 
 - [ ] **Step 1: Write the builder**
 
-Write `runway/crates/runway-app-host/src/builder.rs`:
+Write `runtime-runway/crates/runway-app-host/src/builder.rs`:
 
 ```rust
 use std::sync::Arc;
@@ -928,7 +928,7 @@ git commit -m "feat(runway-app-host): add builder API with init order and serve"
 
 ### Task 1.10: Contract test against a no-op module
 
-**Files:** Create `runway/crates/runway-app-host/tests/contract_test.rs`
+**Files:** Create `runtime-runway/crates/runway-app-host/tests/contract_test.rs`
 
 - [ ] **Step 1: Write the test**
 
@@ -1096,18 +1096,18 @@ EOF
 
 ### Task 2.1: Create workspace root
 
-**Files:** New directory `/Users/kpernyer/dev/reflective/stack/atelier-showcase/`
+**Files:** New directory `/Users/kpernyer/dev/reflective/atelier-showcase/`
 
 - [ ] **Step 1: Create the workspace**
 
 ```bash
-mkdir -p /Users/kpernyer/dev/reflective/stack/atelier-showcase/{crm-showcase/src,crates}
-cd /Users/kpernyer/dev/reflective/stack/atelier-showcase
+mkdir -p /Users/kpernyer/dev/reflective/atelier-showcase/{crm-showcase/src,crates}
+cd /Users/kpernyer/dev/reflective/atelier-showcase
 ```
 
 - [ ] **Step 2: Write workspace `Cargo.toml`**
 
-Write `/Users/kpernyer/dev/reflective/stack/atelier-showcase/Cargo.toml`:
+Write `/Users/kpernyer/dev/reflective/atelier-showcase/Cargo.toml`:
 
 ```toml
 [workspace]
@@ -1145,11 +1145,11 @@ uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 # Cross-repo
-runway-app-host = { path = "../../reflective/runway/crates/runway-app-host" }
-runway-storage = { path = "../../reflective/runway/crates/runway-storage" }
+runway-app-host = { path = "../../reflective/runtime-runway/crates/runway-app-host" }
+runway-storage = { path = "../../reflective/runtime-runway/crates/runway-storage" }
 ```
 
-(Engineer: verify the relative path from `stack/atelier-showcase/` to `reflective/runway/crates/...` — `../../reflective/runway/...` assumes co-located parent directories. Adjust if needed.)
+(Engineer: verify the relative path from `stack/atelier-showcase/` to `reflective/runtime-runway/crates/...` — `../../reflective/runtime-runway/...` assumes co-located parent directories. Adjust if needed.)
 
 - [ ] **Step 3: Write `README.md`, `CLAUDE.md`, `MILESTONES.md`**
 
@@ -1159,13 +1159,13 @@ Write `README.md`:
 # Atelier Showcase
 
 Reflective showcase apps — example deployments demonstrating how to compose
-Runway + Helm modules into a thin app binary.
+Runtime Runway + Helm modules into a thin app binary.
 
 Each crate in `crates/crm-*` is a `HelmModule` impl. The `crm-showcase/`
 binary mounts them on top of `runway-app-host` to produce a runnable CRM demo.
 
 This repo is for examples, not platform infrastructure. Reusable patterns
-belong in Helm; ops/runtime belong in Runway; commercial concerns belong in
+belong in Helm; ops/runtime belong in Runtime Runway; commercial concerns belong in
 Commerce Rails.
 ```
 
@@ -1178,14 +1178,14 @@ Write `CLAUDE.md`:
 
 ## What belongs here
 
-- Showcase apps demonstrating Runway + Helm composition
+- Showcase apps demonstrating Runtime Runway + Helm composition
 - CRM demo binary and its module crates
 - Showcase-only truth bodies
 
 ## What does NOT belong here
 
 - Reusable Helm patterns — those go in `stack/bedrock-platform/helms/crates/`
-- Runway infrastructure — that goes in `reflective/runway/`
+- Runtime Runway infrastructure — that goes in `reflective/runtime-runway/`
 - Commerce / billing — that goes in `reflective/commerce-rails/`
 
 ## Rules
@@ -1294,7 +1294,7 @@ async fn main() -> anyhow::Result<()> {
 - [ ] **Step 4: Verify the workspace builds**
 
 ```bash
-cd /Users/kpernyer/dev/reflective/stack/atelier-showcase
+cd /Users/kpernyer/dev/reflective/atelier-showcase
 cargo build
 ```
 Expected: All 10 crates compile (placeholders, no logic).
@@ -1305,7 +1305,7 @@ Expected: All 10 crates compile (placeholders, no logic).
 git add .
 git commit -m "feat(atelier-showcase): add empty crate skeletons for CRM modules"
 git push -u origin HEAD
-gh pr create --title "feat(atelier-showcase): bootstrap workspace + skeletons" --body "Bootstraps the atelier-showcase workspace with empty crate skeletons. Spec: ../reflective/runway/docs/superpowers/specs/2026-05-28-runway-helm-app-host-boundary-design.md"
+gh pr create --title "feat(atelier-showcase): bootstrap workspace + skeletons" --body "Bootstraps the atelier-showcase workspace with empty crate skeletons. Spec: ../reflective/runtime-runway/docs/superpowers/specs/2026-05-28-runway-helm-app-host-boundary-design.md"
 ```
 
 ---
@@ -1321,7 +1321,7 @@ gh pr create --title "feat(atelier-showcase): bootstrap workspace + skeletons" -
 - [ ] **Step 1: Create the directory and Cargo.toml**
 
 ```bash
-mkdir -p /Users/kpernyer/dev/reflective/stack/bedrock-platform/helms/crates/helm-operator-control/src
+mkdir -p /Users/kpernyer/dev/reflective/bedrock-platform/helms/crates/helm-operator-control/src
 ```
 
 Write `Cargo.toml`:
@@ -1339,7 +1339,7 @@ anyhow.workspace = true
 async-trait = "0.1"
 axum.workspace = true
 chrono.workspace = true
-runway-app-host = { path = "../../../../../reflective/runway/crates/runway-app-host" }
+runway-app-host = { path = "../../../../../reflective/runtime-runway/crates/runway-app-host" }
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
@@ -1353,7 +1353,7 @@ truth-catalog = { path = "../truth-catalog" }
 capability-core = { path = "../capability-core" }
 ```
 
-(Engineer: confirm the relative path to `runway-app-host`. Helm is at `stack/bedrock-platform/helms/crates/helm-operator-control/`; runway is at `reflective/runway/crates/runway-app-host/`. The dotdot count above assumes a common parent at `/Users/kpernyer/dev/`. Adjust.)
+(Engineer: confirm the relative path to `runway-app-host`. Helm is at `stack/bedrock-platform/helms/crates/helm-operator-control/`; runway is at `reflective/runtime-runway/crates/runway-app-host/`. The dotdot count above assumes a common parent at `/Users/kpernyer/dev/`. Adjust.)
 
 - [ ] **Step 2: Add to Helm workspace members**
 
@@ -1365,7 +1365,7 @@ Edit `stack/bedrock-platform/helms/Cargo.toml` `[workspace] members =`, add:
 - [ ] **Step 3: Verify workspace still builds**
 
 ```bash
-cd /Users/kpernyer/dev/reflective/stack/bedrock-platform/helms
+cd /Users/kpernyer/dev/reflective/bedrock-platform/helms
 cargo build -p helm-operator-control
 ```
 Expected: PASS (empty crate compiles).
@@ -1526,7 +1526,7 @@ async-trait = "0.1"
 axum.workspace = true
 chrono.workspace = true
 futures = "0.3"
-runway-app-host = { path = "../../../../../reflective/runway/crates/runway-app-host" }
+runway-app-host = { path = "../../../../../reflective/runtime-runway/crates/runway-app-host" }
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
@@ -1658,7 +1658,7 @@ anyhow.workspace = true
 async-trait = "0.1"
 axum.workspace = true
 chrono.workspace = true
-runway-app-host = { path = "../../../../../reflective/runway/crates/runway-app-host" }
+runway-app-host = { path = "../../../../../reflective/runtime-runway/crates/runway-app-host" }
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
@@ -2021,7 +2021,7 @@ gh pr create --title "feat(crm-showcase): runnable CRM demo on runway-app-host" 
 
 ## Phase 8: `catalyst-backend` binary
 
-**PR title:** `feat(catalyst-backend): thin Runway-hosted binary with operator-control + governed-jobs`
+**PR title:** `feat(catalyst-backend): thin Runtime Runway-hosted binary with operator-control + governed-jobs`
 
 ### Task 8.1: Move Catalyst truth bodies
 
@@ -2045,7 +2045,7 @@ publish.workspace = true
 [dependencies]
 anyhow = "1"
 async-trait = "0.1"
-helm-truth-execution = { path = "../../../stack/bedrock-platform/helms/crates/helm-truth-execution" }
+helm-truth-execution = { path = "../../../bedrock-platform/helms/crates/helm-truth-execution" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tracing = "0.1"
@@ -2054,11 +2054,11 @@ tracing = "0.1"
 - [ ] **Step 2: Move the 3 truth files**
 
 ```bash
-cp stack/bedrock-platform/helms/crates/application-server/src/truth_runtime/score_inbound_fit.rs \
+cp bedrock-platform/helms/crates/application-server/src/truth_runtime/score_inbound_fit.rs \
    marquee-apps/catalyst-biz/truths/src/score_inbound_fit.rs
-cp stack/bedrock-platform/helms/crates/application-server/src/truth_runtime/qualify_inbound_lead.rs \
+cp bedrock-platform/helms/crates/application-server/src/truth_runtime/qualify_inbound_lead.rs \
    marquee-apps/catalyst-biz/truths/src/qualify_inbound_lead.rs
-cp stack/bedrock-platform/helms/crates/application-server/src/truth_runtime/schedule_strategic_meetings.rs \
+cp bedrock-platform/helms/crates/application-server/src/truth_runtime/schedule_strategic_meetings.rs \
    marquee-apps/catalyst-biz/truths/src/schedule_strategic_meetings.rs
 ```
 
@@ -2129,13 +2129,13 @@ tracing = "0.1"
 tracing-subscriber = "0.3"
 
 # Cross-repo
-runway-app-host = { path = "../../../../reflective/runway/crates/runway-app-host" }
-runway-secrets = { path = "../../../../reflective/runway/crates/runway-secrets" }
-runway-storage = { path = "../../../../reflective/runway/crates/runway-storage" }
-runway-telemetry = { path = "../../../../reflective/runway/crates/runway-telemetry" }
-helm-operator-control = { path = "../../../../stack/bedrock-platform/helms/crates/helm-operator-control" }
-helm-governed-jobs = { path = "../../../../stack/bedrock-platform/helms/crates/helm-governed-jobs" }
-helm-truth-execution = { path = "../../../../stack/bedrock-platform/helms/crates/helm-truth-execution" }
+runway-app-host = { path = "../../../runtime-runway/crates/runway-app-host" }
+runway-secrets = { path = "../../../runtime-runway/crates/runway-secrets" }
+runway-storage = { path = "../../../runtime-runway/crates/runway-storage" }
+runway-telemetry = { path = "../../../runtime-runway/crates/runway-telemetry" }
+helm-operator-control = { path = "../../../bedrock-platform/helms/crates/helm-operator-control" }
+helm-governed-jobs = { path = "../../../bedrock-platform/helms/crates/helm-governed-jobs" }
+helm-truth-execution = { path = "../../../bedrock-platform/helms/crates/helm-truth-execution" }
 catalyst-truths = { path = "../truths" }
 ```
 
@@ -2205,7 +2205,7 @@ Expected: PASS.
 
 - [ ] **Step 1: Add justfile target**
 
-In `runway/Justfile`, append:
+In `runtime-runway/Justfile`, append:
 
 ```just
 # Run Catalyst backend locally against StorageKit::local.
@@ -2241,7 +2241,7 @@ Expected: the full sequence flows through. (Engineer: if any step fails, fix the
 
 ```bash
 git add marquee-apps/catalyst-biz/backend marquee-apps/catalyst-biz/Cargo.toml
-git add runway/Justfile
+git add runtime-runway/Justfile
 git commit -m "feat(catalyst-backend): thin binary mounting operator-control + governed-jobs"
 git push -u origin HEAD
 gh pr create --title "feat(catalyst-backend): runnable proof binary" --body "Boots locally and runs the score-inbound-fit → HITL flow through the new mount contract."
@@ -2291,7 +2291,7 @@ Expected: PASS.
 
 ```bash
 rg "application-server" stack/bedrock-platform/helms/ \
-   reflective/runway/ops/ \
+   reflective/runtime-runway/ops/ \
    .github/
 ```
 
@@ -2317,10 +2317,10 @@ gh pr create --title "chore(helms): delete application-server" --body "Removes t
 - [ ] **Step 1: Create directory + main.tf**
 
 ```bash
-mkdir -p runway/ops/infra/terraform/catalyst-backend
+mkdir -p runtime-runway/ops/infra/terraform/catalyst-backend
 ```
 
-`runway/ops/infra/terraform/catalyst-backend/variables.tf`:
+`runtime-runway/ops/infra/terraform/catalyst-backend/variables.tf`:
 
 ```hcl
 variable "project_id" { type = string }
@@ -2329,7 +2329,7 @@ variable "image_uri"  { type = string }
 variable "env"        { type = map(string); default = {} }
 ```
 
-`runway/ops/infra/terraform/catalyst-backend/service_account.tf`:
+`runtime-runway/ops/infra/terraform/catalyst-backend/service_account.tf`:
 
 ```hcl
 resource "google_service_account" "catalyst_backend" {
@@ -2363,7 +2363,7 @@ resource "google_project_iam_member" "pubsub_publisher" {
 }
 ```
 
-`runway/ops/infra/terraform/catalyst-backend/main.tf`:
+`runtime-runway/ops/infra/terraform/catalyst-backend/main.tf`:
 
 ```hcl
 resource "google_cloud_run_v2_service" "catalyst_backend" {
@@ -2388,7 +2388,7 @@ resource "google_cloud_run_v2_service" "catalyst_backend" {
 }
 ```
 
-`runway/ops/infra/terraform/catalyst-backend/outputs.tf`:
+`runtime-runway/ops/infra/terraform/catalyst-backend/outputs.tf`:
 
 ```hcl
 output "service_url" {
@@ -2403,7 +2403,7 @@ output "service_account_email" {
 - [ ] **Step 2: tf init + plan in staging**
 
 ```bash
-cd runway/ops/infra/terraform
+cd runtime-runway/ops/infra/terraform
 # Engineer: configure backend state if not already.
 terraform init
 terraform plan -var-file=staging.tfvars
@@ -2449,7 +2449,7 @@ Expected: 200.
 
 ### Task 10.3: Justfile deploy target
 
-- [ ] **Step 1: Add to `runway/Justfile`**
+- [ ] **Step 1: Add to `runtime-runway/Justfile`**
 
 ```just
 # Build and deploy catalyst-backend to Cloud Run.
@@ -2478,7 +2478,7 @@ smoke-catalyst-cloud project_id region="europe-west1":
 
 - [ ] **Step 1: Write workflow**
 
-`runway/.github/workflows/deploy-catalyst.yml`:
+`runtime-runway/.github/workflows/deploy-catalyst.yml`:
 
 ```yaml
 name: Deploy Catalyst
@@ -2556,9 +2556,9 @@ Expected: GitHub Action runs, builds, deploys, smokes — all green.
 - [ ] **Step 4: Commit + PR**
 
 ```bash
-git add runway/ops/infra/terraform/catalyst-backend \
-        runway/Justfile \
-        runway/.github/workflows/deploy-catalyst.yml \
+git add runtime-runway/ops/infra/terraform/catalyst-backend \
+        runtime-runway/Justfile \
+        runtime-runway/.github/workflows/deploy-catalyst.yml \
         marquee-apps/catalyst-biz/backend/Dockerfile
 git commit -m "feat(ops): Cloud Run target + GitHub Action for catalyst-backend"
 git push -u origin HEAD

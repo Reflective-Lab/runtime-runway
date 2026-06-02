@@ -1,6 +1,6 @@
 [package]
 name = "runway-middleware"
-description = "Axum tower middleware stack for all Runway backends: request-id, health, errors, shutdown"
+description = "Axum tower middleware stack for all Runtime Runway backends: request-id, health, errors, shutdown"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

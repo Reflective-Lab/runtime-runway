@@ -2,13 +2,25 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CONVERGE_ROOT="${CONVERGE_ROOT:-$ROOT_DIR/../stack/bedrock-platform/converge}"
+CONVERGE_ROOT="${CONVERGE_ROOT:-$ROOT_DIR/../bedrock-platform/converge}"
 PROJECT_ID="${PROJECT_ID:-${GOOGLE_CLOUD_PROJECT:-}}"
 REGION="${REGION:-europe-west1}"
 SERVICE_NAME="${SERVICE_NAME:-converge-runtime}"
 REPOSITORY="${REPOSITORY:-converge}"
 IMAGE_NAME="${IMAGE_NAME:-converge-runtime}"
 FIREBASE_PROJECT_ID="${FIREBASE_PROJECT_ID:-$PROJECT_ID}"
+
+if [[ "${ALLOW_LEGACY_CONVERGE_RUNTIME_DEPLOY:-false}" != "true" ]]; then
+  cat >&2 <<'EOF'
+converge-runtime is retired as the canonical deployed service.
+
+Use Runtime Runway app-host/app-backend deploys for current services.
+To run this historical compatibility deploy intentionally, set:
+
+  ALLOW_LEGACY_CONVERGE_RUNTIME_DEPLOY=true
+EOF
+  exit 1
+fi
 
 if [[ -z "$PROJECT_ID" ]]; then
   echo "Set PROJECT_ID or GOOGLE_CLOUD_PROJECT before deploying." >&2
@@ -21,7 +33,7 @@ command -v gcloud >/dev/null 2>&1 || {
 }
 [[ -f "$CONVERGE_ROOT/Cargo.toml" ]] || {
   echo "Converge source not found at $CONVERGE_ROOT" >&2
-  echo "Set CONVERGE_ROOT or check out ~/dev/reflective/stack/bedrock-platform/converge." >&2
+  echo "Set CONVERGE_ROOT or check out ~/dev/reflective/bedrock-platform/converge." >&2
   exit 1
 }
 

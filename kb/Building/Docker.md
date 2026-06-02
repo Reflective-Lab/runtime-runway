@@ -3,13 +3,14 @@ source: mixed
 ---
 # Docker
 
-Container definitions for the Converge runtime, api-server, and supporting services.
+Container definitions for `api-server`, the retired `converge-runtime`
+compatibility shell, and supporting services.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `docker/Dockerfile` | Multi-stage build for `converge-runtime` |
+| `docker/Dockerfile` | Multi-stage build for legacy `converge-runtime` compatibility shell |
 | `docker/Dockerfile.api-server` | Multi-stage build for `api-server` (runway-* reference service) |
 | `docker/compose.yaml` | Local dev stack |
 | `cloudbuild.api-server.yaml` | Cloud Build config for api-server |
@@ -48,13 +49,19 @@ just api-docker-run      # run the Docker image locally
 
 ---
 
-## Dockerfile (converge-runtime)
+## Dockerfile (legacy converge-runtime)
+
+This path is retained for compatibility checks only. It is not the current
+Reflective stack runtime. Current app services should use `api-server`,
+`runway-app-host`, or an app-specific backend.
 
 Two-stage build:
 1. **Builder** — `rust:1.94-bookworm`, compiles `converge-runtime --features gcp,auth,firebase`
 2. **Runtime** — `debian:bookworm-slim`, exposes port 8080
 
-Build context must contain the Converge repo root. `docker/compose.yaml` pulls it from `../../stack/bedrock-platform/converge`; `ops/scripts/dev-up.sh` resolves it to an absolute path.
+Build context must contain the Converge repo root. `docker/compose.yaml` pulls
+it from `../../bedrock-platform/converge`; `ops/scripts/dev-up.sh` resolves it
+to an absolute path.
 
 ---
 

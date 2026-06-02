@@ -1,6 +1,6 @@
 //! GCE/Cloud Run metadata server helpers.
 //!
-//! Single source of truth for the GCP instance-metadata URL. All Runway
+//! Single source of truth for the GCP instance-metadata URL. All Runtime Runway
 //! crates that need a service-account access token route through here
 //! instead of hardcoding the URL themselves.
 

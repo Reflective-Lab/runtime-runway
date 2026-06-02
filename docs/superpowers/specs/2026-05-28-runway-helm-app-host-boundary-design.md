@@ -1,18 +1,18 @@
-# Runway/Helm App-Host Boundary — Design
+# Runtime Runway/Helm App-Host Boundary — Design
 
 **Date:** 2026-05-28
 **Status:** Draft for review
-**Scope:** Lock the canonical app execution container across Runway, Helm, and a thin app. Prove it end-to-end with Catalyst on Cloud Run.
+**Scope:** Lock the canonical app execution container across Runtime Runway, Helm, and a thin app. Prove it end-to-end with Catalyst on Cloud Run.
 
 ---
 
 ## 1. Goal
 
-Stop the drift toward app-owned backend servers. Runway provides the standard execution container. Helm becomes a pure library of reusable "App + Operator" patterns. Each app is a thin binary that composes Runway + Helm modules + its own domain content.
+Stop the drift toward app-owned backend servers. Runtime Runway provides the standard execution container. Helm becomes a pure library of reusable "App + Operator" patterns. Each app is a thin binary that composes Runtime Runway + Helm modules + its own domain content.
 
 This spec covers three interlocking workstreams that ship together:
 
-1. **Mount contract** — define the `HelmModule` trait and supporting `HostContext` in `runway-app-host` so modules slot into Runway cleanly.
+1. **Mount contract** — define the `HelmModule` trait and supporting `HostContext` in `runway-app-host` so modules slot into Runtime Runway cleanly.
 2. **Helm reshape** — strip host scaffolding out of `helms/crates/application-server`, extract reusable modules as their own crates, decommission `application-server`.
 3. **Showcase + Catalyst proof** — relocate CRM showcase code to a new `stack/atelier-showcase` workspace, ship `catalyst-backend` as the first thin app on the new contract, deploy to Cloud Run.
 
@@ -22,7 +22,7 @@ This spec covers three interlocking workstreams that ship together:
 
 - Three Immediate-Priority deliverables in `MILESTONES.md` block on each other; staggering them across separate cycles risks refactoring blind toward a contract that hasn't been pinned down.
 - Helm's `application-server` currently mixes host infrastructure, reusable patterns, and CRM-specific showcase content. Without untangling, every new app risks copying the same monolithic shape.
-- Catalyst's runway proof (`marquee-apps/kb/catalyst-runway-proof.md`) is at P3 — the unfinished step is exactly "name the deployable backend binary and wire it through Runway." This spec answers it.
+- Catalyst's runway proof (`marquee-apps/kb/catalyst-runway-proof.md`) is at P3 — the unfinished step is exactly "name the deployable backend binary and wire it through Runtime Runway." This spec answers it.
 
 ---
 
@@ -38,7 +38,7 @@ This spec covers three interlocking workstreams that ship together:
 │                        helm-governed-jobs,               │
 │                        helm-truth-execution              │
 ├──────────────────────┬──────────────────────────────────┤
-│  Runway              │  Commerce Rails                   │
+│  Runtime Runway              │  Commerce Rails                   │
 │  Ops authority       │  Commercial authority             │
 │  telemetry, GCP,     │  subscriptions, billing,          │
 │  storage, auth,      │  entitlements, Stripe Connect     │
@@ -49,16 +49,16 @@ This spec covers three interlocking workstreams that ship together:
 
 ### Authority and dependency direction
 
-- **App** imports Runway + Helm modules. Eventually also imports Commerce Rails.
-- **Helm** imports Runway. Never imports apps, Commerce Rails, or other Helm modules unless explicitly reusing one.
-- **Runway** imports nothing above it. Never knows what app or what Helm module is running.
-- **Commerce Rails** is a peer authority to Runway. Out of scope for this spec — referenced only.
+- **App** imports Runtime Runway + Helm modules. Eventually also imports Commerce Rails.
+- **Helm** imports Runtime Runway. Never imports apps, Commerce Rails, or other Helm modules unless explicitly reusing one.
+- **Runtime Runway** imports nothing above it. Never knows what app or what Helm module is running.
+- **Commerce Rails** is a peer authority to Runtime Runway. Out of scope for this spec — referenced only.
 
 ### Repository map
 
 | Repo | Purpose | Touched by this spec |
 |---|---|---|
-| `runway/` | Runway crates + `runway-app-host` | Yes — extended |
+| `runtime-runway/` | Runtime Runway crates + `runway-app-host` | Yes — extended |
 | `stack/bedrock-platform/helms/` | Helm module crates | Yes — restructured |
 | `stack/atelier-showcase/` | Non-reusable showcase apps | Yes — bootstrapped |
 | `marquee-apps/catalyst-biz/` | Catalyst app | Yes — backend added |
@@ -66,7 +66,7 @@ This spec covers three interlocking workstreams that ship together:
 
 ### Helm-side adoption
 
-Helm has its own boundary doc at `stack/bedrock-platform/helms/kb/Architecture/Runway Execution Container Boundary.md` covering the same decision from Helm's perspective — what Helm keeps owning vs. what migrates to Runway, with a practical-migration-rule table and a row-for-row "current application-server split" table that maps onto § 5.2 here. Treat both docs as authoritative; if they drift, this spec wins on host-side concerns and the Helm KB wins on operator-control semantics.
+Helm has its own boundary doc at `stack/bedrock-platform/helms/kb/Architecture/Runtime Runway Execution Container Boundary.md` covering the same decision from Helm's perspective — what Helm keeps owning vs. what migrates to Runtime Runway, with a practical-migration-rule table and a row-for-row "current application-server split" table that maps onto § 5.2 here. Treat both docs as authoritative; if they drift, this spec wins on host-side concerns and the Helm KB wins on operator-control semantics.
 
 ---
 
@@ -134,7 +134,7 @@ Envelope shape matches the contract documented in `marquee-apps/kb/catalyst-runw
 
 `EventHubHandle` is the cheaply-cloneable handle stored on `HostContext` — modules clone it freely into their own state and background tasks. The underlying `EventHub` lives in the host and is dropped on shutdown.
 
-**One hub per app runtime, owned by Runway.** Connection lifecycle, auth context, CORS, heartbeats, backpressure, tracing, shutdown are host concerns. Modules publish typed events through `ctx.realtime.publish(...)` and subscribe via `ctx.realtime.subscribe()`.
+**One hub per app runtime, owned by Runtime Runway.** Connection lifecycle, auth context, CORS, heartbeats, backpressure, tracing, shutdown are host concerns. Modules publish typed events through `ctx.realtime.publish(...)` and subscribe via `ctx.realtime.subscribe()`.
 
 The host mounts one canonical SSE projection at:
 
@@ -146,7 +146,7 @@ Modules MAY expose filtered projection routes (e.g. `GET /v1/jobs/{key}/stream`)
 
 ### 4.4 HITL approvals — transport vs semantics
 
-Runway owns the transport. Modules own the semantics.
+Runtime Runway owns the transport. Modules own the semantics.
 
 The host mounts:
 
@@ -221,7 +221,7 @@ Each implements `HelmModule`. Each holds its own state. None reaches outside its
 
 ## 6. `stack/atelier-showcase` bootstrap
 
-New workspace at `/Users/kpernyer/dev/reflective/stack/atelier-showcase/`. Mirrors Helm's conventions (Cargo workspace, `crates/` directory, top-level `README.md`, `CLAUDE.md`, `MILESTONES.md`).
+New workspace at `/Users/kpernyer/dev/reflective/atelier-showcase/`. Mirrors Helm's conventions (Cargo workspace, `crates/` directory, top-level `README.md`, `CLAUDE.md`, `MILESTONES.md`).
 
 ### 6.1 Layout
 
@@ -351,7 +351,7 @@ Populated in Secret Manager before first deploy:
 ### 8.3 Image + deploy
 
 - New `marquee-apps/catalyst-biz/backend/Dockerfile` — multistage Rust build, distroless final.
-- `just deploy-catalyst` in `runway/justfile` — builds, pushes to Google Artifact Registry, runs `gcloud run deploy`.
+- `just deploy-catalyst` in `runtime-runway/justfile` — builds, pushes to Google Artifact Registry, runs `gcloud run deploy`.
 - `.github/workflows/deploy-catalyst.yml` — triggered on `v*` tag push on `marquee-apps`.
 
 ### 8.4 Smoke test

@@ -4,7 +4,7 @@ source: llm
 ---
 # Index
 
-Entity catalog for the Runway knowledge base. Update when projects, crates, services, or domain concepts change.
+Entity catalog for the Runtime Runway knowledge base. Update when projects, crates, services, or domain concepts change.
 
 ## Crates
 
@@ -19,7 +19,7 @@ Entity catalog for the Runway knowledge base. Update when projects, crates, serv
 | Entity | Type | Location |
 |--------|------|----------|
 | Docker compose | container stack | `docker/` |
-| Cloud Run deploy | script | `ops/scripts/deploy-cloud-run.sh` |
+| Legacy converge-runtime Cloud Run deploy | guarded script | `ops/scripts/deploy-cloud-run.sh` |
 | Cloud Run GPU | script + Dockerfile | `ops/deploy/gpu/cloudrun/` |
 | RunPod GPU | Dockerfile | `ops/deploy/gpu/runpod/` |
 | Modal GPU | Python stub | `ops/deploy/gpu/modal/` |
@@ -40,9 +40,9 @@ Entity catalog for the Runway knowledge base. Update when projects, crates, serv
 | Section | Purpose |
 |---------|---------|
 | [[Architecture/Application]] | CLI/TUI binary |
-| [[Architecture/App Execution Container]] | Canonical app backend host and Runway/Helm/app split |
+| [[Architecture/App Execution Container]] | Canonical app backend host and Runtime Runway/Helm/app split |
 | [[Architecture/Crate Map]] | Crate layout and deps |
-| [[Architecture/Commerce Rails Boundary]] | Runway vs. Commerce Rails authority split, Stripe ownership, org model |
+| [[Architecture/Commerce Rails Boundary]] | Runtime Runway vs. Commerce Rails authority split, Stripe ownership, org model |
 | [[Architecture/Security]] | Auth, JWT, CORS, webhook, open issues |
 | [[Building/Deployment]] | Deploy guide |
 | [[Operations/Secrets]] | Secret rotation, GCP projects, migration intent |

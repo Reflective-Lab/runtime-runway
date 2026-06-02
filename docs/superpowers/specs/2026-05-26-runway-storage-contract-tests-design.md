@@ -1,4 +1,4 @@
-# Runway Storage Contract Tests — Design
+# Runtime Runway Storage Contract Tests — Design
 
 **Status:** Approved design, ready for implementation plan
 **Date:** 2026-05-26
@@ -9,7 +9,7 @@
 Establish a contract test suite that proves the local and remote `StorageKit`
 backends behave equivalently against the traits they implement. The suite is
 the executable specification of what each trait promises. Apps built on
-Runway (Helm, Axiom, Organism) inherit that guarantee — they only need to test
+Runtime Runway (Helm, Axiom, Organism) inherit that guarantee — they only need to test
 app logic, not "does the platform work in this environment."
 
 ## Motivation
@@ -47,7 +47,7 @@ converts this assertion into a fact, and makes divergences a CI-blocking failure
 
 **Out of scope (follow-up):**
 
-- Contract suites for other Runway crates (`runway-secrets`, `runway-auth`, etc.)
+- Contract suites for other Runtime Runway crates (`runway-secrets`, `runway-auth`, etc.)
 - Performance benchmarks (this is correctness, not perf)
 - Downstream caller updates (Helm/Axiom/Organism) for the `Embedding` typed
   wrapper — tracked as a separate piece of work

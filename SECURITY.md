@@ -1,6 +1,6 @@
 # Security Policy
 
-This policy covers vulnerability reporting for the Reflective Runway repository.
+This policy covers vulnerability reporting for the Reflective Runtime Runway repository.
 
 ## Supported Versions
 
@@ -22,7 +22,7 @@ You should receive a response within 48 hours. If for some reason you do not, pl
 
 Please include the following information in your report:
 
-- The version of Runway you're using
+- The version of Runtime Runway you're using
 - A description of the vulnerability
 - Steps to reproduce the issue
 - Any relevant logs or error messages
@@ -60,7 +60,7 @@ Deployers are responsible for:
 
 ## Security Best Practices
 
-When deploying with Runway:
+When deploying with Runtime Runway:
 
 - Keep dependencies updated
 - Use the latest stable version

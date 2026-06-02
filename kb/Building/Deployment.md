@@ -9,9 +9,9 @@ source: mixed
 |--------|---------|--------|
 | Local native (api-server) | `just api-up` | Working |
 | Local native (converge-application) | `cargo run -p converge-application` | Working |
-| Local container | `just docker-up` | Working (Converge checkout required) |
+| Local container | `just docker-up` | Legacy converge-runtime compatibility shell |
 | Cloud Run (api-server) | `just api-deploy` | Live — `wolfgang-kb-prod`, `europe-west1` |
-| Cloud Run (converge-runtime) | `ops/scripts/deploy-cloud-run.sh` | Script-based |
+| Cloud Run (converge-runtime) | `ALLOW_LEGACY_CONVERGE_RUNTIME_DEPLOY=true ops/scripts/deploy-cloud-run.sh` | Retired compatibility only |
 | Cloud Run GPU | `ops/deploy/gpu/cloudrun/deploy.sh` | Script-based |
 | Firebase Hosting (apps.reflective.se) | `just apps-deploy` | Live |
 
@@ -141,7 +141,12 @@ cargo run -p converge-application
 # or: just docker-up
 ```
 
-See [[Building/Docker]] for Docker compose details. Cloud Run deployment for `converge-runtime` uses `ops/scripts/deploy-cloud-run.sh` and requires a local Converge checkout or `CONVERGE_ROOT` override.
+See [[Building/Docker]] for Docker compose details. The `converge-runtime`
+container path is legacy compatibility only. Current hosted app services should
+deploy through `api-server`, `runway-app-host`, or an app-specific backend.
+
+The historical `ops/scripts/deploy-cloud-run.sh` path refuses to run unless
+`ALLOW_LEGACY_CONVERGE_RUNTIME_DEPLOY=true` is set.
 
 ---
 

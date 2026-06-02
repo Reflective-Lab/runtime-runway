@@ -22,7 +22,7 @@ Weekly Runway repo review.
    - Verify Rust edition/rust-version, `unsafe` policy still match repo docs
    - Verify Converge dependency paths are valid (`../converge/crates/...`)
 4. **Milestones**:
-   - Read `MILESTONES.md` and `~/dev/reflective/stack/bedrock-platform/EPIC.md`
+   - Read `MILESTONES.md` and `~/dev/reflective/bedrock-platform/EPIC.md`
    - Flag overdue work or deadline risk
 5. If you learn something that should persist, update the relevant `kb/` page.
 6. Output:

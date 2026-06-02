@@ -1,6 +1,6 @@
 [package]
 name = "runway-storage"
-description = "Shared storage abstraction for Runway apps — local (redb + local FS + fastembed) and remote (Firestore + GCS + Vertex AI)"
+description = "Shared storage abstraction for Runtime Runway apps — local (redb + local FS + fastembed) and remote (Firestore + GCS + Vertex AI)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

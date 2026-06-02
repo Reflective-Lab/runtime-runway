@@ -1,6 +1,6 @@
 [package]
 name = "runway-auth"
-description = "Firebase Auth token validation and Axum middleware for Runway backends"
+description = "Firebase Auth token validation and Axum middleware for Runtime Runway backends"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

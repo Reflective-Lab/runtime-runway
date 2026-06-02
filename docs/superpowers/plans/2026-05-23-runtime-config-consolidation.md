@@ -34,12 +34,12 @@
 
 ## Task 0: Commit pre-existing WIP
 
-**Files:** the in-flight diff in `runway/` (rustfmt cosmetics + dev-claims tweak in auth middleware).
+**Files:** the in-flight diff in `runtime-runway/` (rustfmt cosmetics + dev-claims tweak in auth middleware).
 
 - [ ] **Step 1: Inspect WIP**
 
 ```bash
-cd /Users/kpernyer/dev/reflective/runway
+cd /Users/kpernyer/dev/reflective/runtime-runway
 git status
 git diff --stat
 ```
@@ -86,7 +86,7 @@ mod tests {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/kpernyer/dev/reflective/runway
+cd /Users/kpernyer/dev/reflective/runtime-runway
 cargo test -p runway-auth auth_layer_stores_local_dev_flag
 ```
 
@@ -665,7 +665,7 @@ Create `crates/runway-app-host/src/config.rs`:
 
 ```rust
 //! Runtime configuration for the app-host (the binary container that
-//! runs a Runway app inside Cloud Run or locally).
+//! runs a Runtime Runway app inside Cloud Run or locally).
 
 use crate::AppExecutionPacket;
 
@@ -835,7 +835,7 @@ allows tests to construct hosts without setting process env."
 - [ ] **Step 1: Confirm no remaining env reads in the targeted scope**
 
 ```bash
-cd /Users/kpernyer/dev/reflective/runway
+cd /Users/kpernyer/dev/reflective/runtime-runway
 grep -rn 'env::var("LOCAL_DEV"\|env::var("STORAGE_PATH"\|env::var("FIREBASE_PROJECT_ID"\|env::var("ROUTE_PREFIX"\|env::var("APP_URL"' crates/ \
   | grep -v 'src/config.rs'
 ```

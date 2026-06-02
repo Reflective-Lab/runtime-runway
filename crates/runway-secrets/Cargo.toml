@@ -1,6 +1,6 @@
 [package]
 name = "runway-secrets"
-description = "GCP Secret Manager client with typed fetch and zeroize-on-drop for Runway services"
+description = "GCP Secret Manager client with typed fetch and zeroize-on-drop for Runtime Runway services"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

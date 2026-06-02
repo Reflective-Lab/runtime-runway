@@ -6,17 +6,17 @@ Strategic milestones for getting Reflective apps online. Each milestone is a shi
 
 ## Immediate priority — Canonical app execution container
 
-Stop the drift toward app-owned backend servers. Runway should provide the
+Stop the drift toward app-owned backend servers. Runtime Runway should provide the
 standard execution container, Helm should mount operator-control/job modules
 into it, and marquee apps should instantiate it with typed app packets.
 
-- [x] Document the Runway/Helm/app execution-container boundary
+- [x] Document the Runtime Runway/Helm/app execution-container boundary
 - [x] Define the first `AppExecutionPacket` shape using Catalyst
-- [ ] Split Helm `application-server` responsibilities into Runway host concerns
+- [ ] Split Helm `application-server` responsibilities into Runtime Runway host concerns
       and Helm module concerns
-- [x] Extract reusable Runway host construction into `crates/runway-app-host`
-- [ ] Mount Helm operator-control and governed-job routes into the Runway host
-- [ ] Prove Catalyst through the Runway container before adding new app-local
+- [x] Extract reusable Runtime Runway host construction into `crates/runway-app-host`
+- [ ] Mount Helm operator-control and governed-job routes into the Runtime Runway host
+- [ ] Prove Catalyst through the Runtime Runway container before adding new app-local
       backend patterns
 
 ---
@@ -126,15 +126,15 @@ Four agents running in parallel, each adding one piece to the stack:
 
 ## Boundary debt — relocate after canonical execution container lands
 
-Surfaced 2026-05-28 during the Runway/Helm app-host boundary work. The layer
-model says Runway owns ops substrate and Commerce Rails owns commercial
+Surfaced 2026-05-28 during the Runtime Runway/Helm app-host boundary work. The layer
+model says Runtime Runway owns ops substrate and Commerce Rails owns commercial
 authority — but several crates currently sit on the
 wrong side of that line.
 
 - [x] **`runway-accounts/` → `commerce-rails/`** — fixed 2026-05-28.
       Stripe provider config, API calls, webhook signature mechanics, receipt
       construction, and webhook event mapping now live in
-      `commerce-rails/crates/commerce-rails-stripe/`. Runway keeps the
+      `commerce-rails/crates/commerce-rails-stripe/`. Runtime Runway keeps the
       intended HTTPS route and identity/org mirror plumbing, and calls the
       Commerce Rails-owned adapter instead of carrying Stripe business logic inside
       `runway-accounts`.
@@ -154,5 +154,5 @@ wrong side of that line.
 | Offline vectors | fastembed 384-dim zero-padded → 768 | Re-embedded to exact 768-dim on sync |
 | Multi-tenancy | `orgs/{orgId}/apps/{appId}/...` Firestore path | Enforced by security rules + auth claims |
 | Messaging | Pub/Sub only (no NATS) | Same capability, fully managed |
-| Consensus/Raft | `lattice` crate, not Runway | Runway wraps services; Lattice holds algorithms |
+| Consensus/Raft | `lattice` crate, not Runtime Runway | Runtime Runway wraps services; Lattice holds algorithms |
 | Stripe billing | `org_id` = Stripe customer | One org = one subscription, multiple app entitlements |
