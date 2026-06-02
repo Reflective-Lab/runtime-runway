@@ -5,6 +5,16 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+# Belt-and-braces: fastembed downloads ~80 MB of ONNX weights into a
+# crate-local cache when tests run. Never publish that. The repo's
+# .gitignore catches it for git; this catches it for cargo package.
+# Anchor: QF-2026-06-02-09 in the workspace quality backlog.
+exclude = [
+    ".fastembed_cache/",
+    "**/.fastembed_cache/",
+    "*.onnx",
+    "*.safetensors",
+]
 
 [dependencies]
 runway-secrets = { path = "../runway-secrets", version = "3.4.2" }
@@ -26,7 +36,7 @@ uuid = { workspace = true }
 zeroize = { workspace = true }
 
 [dev-dependencies]
-runway-storage-contract = { path = "../runway-storage-contract", version = "3.4.2" }
+runway-storage-contract = { path = "../runway-storage-contract" }
 tempfile = "3"
 
 [features]

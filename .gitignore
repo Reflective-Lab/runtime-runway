@@ -39,3 +39,10 @@ ops/infra/firebase/.firebaserc
 *.bin
 *.pt
 *.onnx
+
+# fastembed runtime cache — created when tests/dev runs download
+# ONNX model weights (~80 MB). Must NEVER be packaged into a crate;
+# QF-2026-06-02-09 in the workspace quality backlog was caused by
+# this exact dir leaking into `cargo package`.
+.fastembed_cache/
+**/.fastembed_cache/
