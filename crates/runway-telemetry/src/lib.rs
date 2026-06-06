@@ -1,5 +1,5 @@
 use anyhow::Result;
-use opentelemetry::global;
+use opentelemetry::{global, trace::TracerProvider as _};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{runtime, trace as sdktrace};
 use tracing_opentelemetry::OpenTelemetryLayer;
@@ -81,7 +81,7 @@ pub fn init(config: TelemetryConfig) -> Result<TelemetryGuard> {
         .otlp_endpoint
         .unwrap_or_else(|| "https://cloudtrace.googleapis.com/v1/traces".to_string());
 
-    let tracer = opentelemetry_otlp::new_pipeline()
+    let provider = opentelemetry_otlp::new_pipeline()
         .tracing()
         .with_exporter(
             opentelemetry_otlp::new_exporter()
@@ -95,6 +95,8 @@ pub fn init(config: TelemetryConfig) -> Result<TelemetryGuard> {
             ]),
         ))
         .install_batch(runtime::Tokio)?;
+    global::set_tracer_provider(provider.clone());
+    let tracer = provider.tracer(config.service.clone());
 
     // JSON subscriber (→ Cloud Logging) + OTel layer + Sentry layer
     tracing_subscriber::registry()

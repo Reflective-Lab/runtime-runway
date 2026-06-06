@@ -592,8 +592,7 @@ impl<B: Backend> LlamaEngine<B> {
 
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_nanos())
-            .unwrap_or(0);
+            .map_or(0, |d| d.as_nanos());
 
         let temp_dir = std::env::temp_dir();
         let path = temp_dir.join(format!("converge_llm_original_{}", timestamp));

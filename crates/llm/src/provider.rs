@@ -55,7 +55,7 @@ impl ProviderError {
     pub fn rate_limit(message: impl Into<String>) -> Self {
         Self {
             inner: LlmError::RateLimited {
-                retry_after: std::time::Duration::from_secs(60),
+                retry_after: std::time::Duration::from_mins(1),
                 message: Some(message.into()),
             },
         }
@@ -506,8 +506,7 @@ fn uuid_v4_simple() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
+        .map_or(0, |d| d.as_nanos());
     format!("{:x}", nanos % 0xFFFF_FFFF)
 }
 
@@ -750,7 +749,7 @@ mod tests {
     #[tokio::test]
     async fn mock_provider_can_return_errors() {
         let provider = MockProvider::new(vec![MockResponse::failure(LlmError::RateLimited {
-            retry_after: std::time::Duration::from_secs(60),
+            retry_after: std::time::Duration::from_mins(1),
             message: Some("Too many requests".into()),
         })]);
 

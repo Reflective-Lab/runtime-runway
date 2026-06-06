@@ -194,7 +194,7 @@ impl DocumentStore for RedbDocumentStore {
             }
             None => {
                 // Default: sort by updated_at descending.
-                result.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+                result.sort_by_key(|doc| std::cmp::Reverse(doc.updated_at));
             }
         }
 
