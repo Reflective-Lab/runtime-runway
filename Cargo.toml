@@ -17,7 +17,7 @@ members = [
 [workspace.package]
 version = "3.4.2"
 edition = "2024"
-rust-version = "1.94.0"
+rust-version = "1.96.0"
 license = "MIT"
 repository = "https://github.com/Reflective-Lab/runway"
 

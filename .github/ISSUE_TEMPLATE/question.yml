@@ -40,7 +40,7 @@ body:
     attributes:
       label: Rust version
       description: What Rust version are you using?
-      placeholder: 1.94.0
+      placeholder: 1.96.0
   - type: input
     id: os
     attributes:

@@ -20,7 +20,7 @@ A clear and concise description of what you expected to happen.
 
 ## Environment
 - OS: [e.g., macOS, Linux, Windows]
-- Rust version: [e.g., 1.94.0]
+- Rust version: [e.g., 1.96.0]
 - Crate: [e.g., converge-application, converge-llm]
 - Features enabled: [e.g., "full", "server,gemma"]
 - Deploy target: [e.g., local, Cloud Run, RunPod]

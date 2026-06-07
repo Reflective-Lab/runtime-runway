@@ -204,7 +204,7 @@ retired service fail fast.
 
 ## Building
 
-Requires: Rust 1.94+, `just`, and the `converge` repo as a sibling.
+Requires: Rust 1.96.0+, `just`, and the `converge` repo as a sibling.
 
 ```bash
 just build              # cargo build --release
@@ -266,7 +266,7 @@ See the [knowledge base](kb/Home.md) for full documentation.
 - Infrastructure is imperative scripts today, IaC later
 - GPU workers are separated from the main runtime
 - Everything proprietary (`LicenseRef-Proprietary`, `publish = false`)
-- Edition 2024, Rust 1.94, Clippy pedantic
+- Edition 2024, Rust 1.96.0, Clippy pedantic
 
 ## Security
 
