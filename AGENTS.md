@@ -74,7 +74,7 @@ These are not suggestions.
 - No feature flags. No backwards-compat shims. Change the code.
 - No unnecessary abstractions. Three similar lines beat a premature helper.
 - All deps use `workspace = true` — never inline versions in crate Cargo.tomls.
-- Edition 2024, rust-version 1.94.
+- Edition 2024, rust-version 1.96.0.
 - Runtime Runway **consumes** converge crates, never contributes to the SDK.
 - Never commit secrets, .env files, or credentials.
 - Never push to main without confirmation.

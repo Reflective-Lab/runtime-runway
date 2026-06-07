@@ -106,6 +106,19 @@ pub struct BuiltHost {
 }
 
 impl BuiltHost {
+    /// Apply an arbitrary transformation to the assembled router before the
+    /// server is bound.  Use this to nest additional services (e.g. a static
+    /// SPA directory) that cannot be expressed as `HelmModule` implementations.
+    ///
+    /// The closure receives the fully-assembled router (with route prefix and all
+    /// mounted modules already applied) and must return a new `Router`.  Nesting
+    /// services here is safe: the domain/API routes registered by modules take
+    /// precedence over any fallback / nested service added by the closure.
+    pub fn modify_router(mut self, f: impl FnOnce(Router) -> Router) -> Self {
+        self.router = f(self.router);
+        self
+    }
+
     pub async fn serve(self) -> Result<()> {
         let any_grpc = self
             .modules
