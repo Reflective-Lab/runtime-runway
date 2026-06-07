@@ -38,6 +38,11 @@ impl Secrets {
             project_id: project_id.into(),
             env: env.into(),
             app: app.into(),
+            // RP-HERMETIC-UNIT (Reflective QUALITY_BACKLOG.md →
+            // QF-2026-06-02-05): production constructor for GCP Secret
+            // Manager access; tests use emulators wired at the test
+            // harness level, not DI through this struct.
+            #[allow(clippy::disallowed_methods)]
             client: reqwest::Client::new(),
         }
     }

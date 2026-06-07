@@ -31,6 +31,11 @@ impl VertexVectorStore {
             project_id,
             region: region.clone(),
             token,
+            // RP-HERMETIC-UNIT (Reflective QUALITY_BACKLOG.md →
+            // QF-2026-06-02-05): production constructor for Vertex
+            // Vector Search API; tests use emulators at the test
+            // harness level, not DI through this struct.
+            #[allow(clippy::disallowed_methods)]
             client: reqwest::Client::new(),
             endpoint_id: std::env::var("VERTEX_INDEX_ENDPOINT_ID").unwrap_or_default(),
             deployed_index_id: std::env::var("VERTEX_DEPLOYED_INDEX_ID").unwrap_or_default(),

@@ -66,6 +66,13 @@ pub struct FirebaseAuth {
 
 impl FirebaseAuth {
     pub fn new(project_id: impl Into<String>) -> Self {
+        // RP-HERMETIC-UNIT (Reflective QUALITY_BACKLOG.md →
+        // QF-2026-06-02-05): production constructor — talks to Google's
+        // Firebase / IAM endpoints. Tests use Firebase Auth emulator at
+        // the test harness level. The `.no_proxy()` shape is
+        // intentional (corporate proxies have broken Google auth in
+        // the past).
+        #[allow(clippy::disallowed_methods)]
         let client = reqwest::Client::builder()
             .no_proxy()
             .build()

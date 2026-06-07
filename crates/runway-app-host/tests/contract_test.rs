@@ -89,6 +89,12 @@ async fn host_mounts_canonical_routes() {
     // Give the listener a moment to bind.
     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
+    // RP-HERMETIC-UNIT (Reflective QUALITY_BACKLOG.md →
+    // QF-2026-06-02-05): this integration test spins up a local Axum
+    // server on 127.0.0.1 and hits it via a real reqwest client. No
+    // external network — the client talks only to the in-process
+    // listener bound a few lines above. Hermetic by construction.
+    #[allow(clippy::disallowed_methods)]
     let client = reqwest::Client::new();
     let base = format!("http://127.0.0.1:{port}");
 

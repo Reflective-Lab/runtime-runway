@@ -148,6 +148,17 @@ struct_excessive_bools = "allow"
 needless_borrows_for_generic_args = "allow"
 unnecessary_sort_by = "allow"
 default_trait_access = "allow"
+# RP-HERMETIC-UNIT (Reflective QUALITY_BACKLOG.md → QF-2026-06-02-05):
+# denies `reqwest::Client::new` / `reqwest::blocking::Client::new` /
+# `::builder` so unit tests can't accidentally hit the network. The
+# disallowed-methods list lives in `clippy.toml` at the workspace root.
+# runtime-runway is the runtime substrate — production code legitimately
+# talks to GCP, Firebase, Vertex, and Stripe. Each callsite is
+# annotated `#[allow(clippy::disallowed_methods)]` with a comment
+# explaining the production role and how tests should stub (emulator
+# at the test harness level, not DI through the struct). Promoted to
+# `deny` 2026-06-07 with all 11 callsites annotated.
+disallowed_methods = "deny"
 
 [profile.quick-release]
 inherits = "release"

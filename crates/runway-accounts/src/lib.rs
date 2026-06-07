@@ -27,6 +27,14 @@ pub struct AccountsState {
 
 impl AccountsState {
     pub fn new(storage: Arc<StorageKit>, config: AccountsConfig) -> Self {
+        // RP-HERMETIC-UNIT (Reflective QUALITY_BACKLOG.md →
+        // QF-2026-06-02-05): production fan-out constructor — the same
+        // default client is shared with CommerceRails and ClaimsService.
+        // Both downstream constructors already take the client as a
+        // parameter, so a future hermetic test for AccountsState can
+        // call those constructors directly with a stub client without
+        // going through AccountsState::new.
+        #[allow(clippy::disallowed_methods)]
         let client = reqwest::Client::new();
         Self {
             store: AccountStore::new(storage),

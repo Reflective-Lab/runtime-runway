@@ -1,0 +1,29 @@
+# Workspace-level clippy configuration for Runtime Runway.
+#
+# RP-HERMETIC-UNIT enforcement (Reflective QUALITY_BACKLOG.md →
+# QF-2026-06-02-05): the methods listed below construct HTTP clients with
+# implicit defaults, making it impossible for a test to substitute a stub
+# without the test author noticing.
+#
+# Runtime Runway is the runtime substrate — production code legitimately
+# talks to GCP, Firebase, Vertex AI, and Stripe at various layers. Each
+# default-client construction is annotated `#[allow(clippy::
+# disallowed_methods)]` with a comment explaining its production role
+# and how tests stub it (typically a GCP/Firebase emulator wired at the
+# test harness level, not DI through the struct constructor).
+#
+# When new code adds an HTTP client, the choice is:
+#   - struct field on a long-lived production type → `#[allow]` + comment
+#     (treat the default constructor as the only convenience path)
+#   - test helper or integration-test fixture → `#[allow]` + comment
+#     explaining the test boundary (e.g. local 127.0.0.1 listener)
+#   - reusable application library → expose a `with_http_client(...)` DI
+#     constructor next to `new(...)` per the Reflective KB standard
+#     KB/05-engineering/standards/hermetic-unit-tests.md.
+
+disallowed-methods = [
+    { path = "reqwest::Client::new", allow-invalid = true, reason = "use DI per RP-HERMETIC-UNIT / QF-2026-06-02-05" },
+    { path = "reqwest::blocking::Client::new", allow-invalid = true, reason = "use DI per RP-HERMETIC-UNIT / QF-2026-06-02-05" },
+    { path = "reqwest::Client::builder", allow-invalid = true, reason = "use DI per RP-HERMETIC-UNIT / QF-2026-06-02-05" },
+    { path = "reqwest::blocking::Client::builder", allow-invalid = true, reason = "use DI per RP-HERMETIC-UNIT / QF-2026-06-02-05" },
+]

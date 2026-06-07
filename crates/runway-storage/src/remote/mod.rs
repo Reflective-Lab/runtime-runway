@@ -103,6 +103,13 @@ impl GcpToken {
         match &self.source {
             TokenSource::Static(t) => Ok(t.clone()),
             TokenSource::Metadata => {
+                // RP-HERMETIC-UNIT (Reflective QUALITY_BACKLOG.md →
+                // QF-2026-06-02-05): production constructor — talks to
+                // the GCP metadata server at a fixed link-local IP.
+                // Tests don't hit this branch (TokenSource is selected
+                // by deployment env); when they do, they use a metadata
+                // emulator wired at the test harness level.
+                #[allow(clippy::disallowed_methods)]
                 let client = reqwest::Client::new();
                 runway_secrets::metadata::fetch_access_token(&client).await
             }

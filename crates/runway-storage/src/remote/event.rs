@@ -23,6 +23,11 @@ impl FirestoreEventLog {
         Self {
             project_id,
             token,
+            // RP-HERMETIC-UNIT (Reflective QUALITY_BACKLOG.md →
+            // QF-2026-06-02-05): production constructor for Firestore
+            // event sink; tests use Firestore emulators at the test
+            // harness level, not DI through this struct.
+            #[allow(clippy::disallowed_methods)]
             client: reqwest::Client::new(),
         }
     }

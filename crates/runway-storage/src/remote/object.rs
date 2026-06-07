@@ -17,6 +17,11 @@ impl GcsObjectStore {
         Self {
             bucket,
             token,
+            // RP-HERMETIC-UNIT (Reflective QUALITY_BACKLOG.md →
+            // QF-2026-06-02-05): production constructor for GCS object
+            // store; tests use GCS emulators at the test harness
+            // level, not DI through this struct.
+            #[allow(clippy::disallowed_methods)]
             client: reqwest::Client::new(),
         }
     }

@@ -76,6 +76,14 @@ mod tests {
 
     #[test]
     fn claims_service_stores_local_dev_flag() {
+        // RP-HERMETIC-UNIT (Reflective QUALITY_BACKLOG.md →
+        // QF-2026-06-02-05): the client here is a sentinel — this test
+        // exercises only the `local_dev` flag plumbing, not the HTTP
+        // path. If a future test needs to hit a stubbed identity
+        // service, wire a stub client (e.g. `wiremock`-backed) via the
+        // existing `ClaimsService::new(client, local_dev)` DI signature
+        // instead.
+        #[allow(clippy::disallowed_methods)]
         let client = reqwest::Client::new();
         let svc = ClaimsService::new(client, true);
         assert!(svc.local_dev);
