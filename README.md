@@ -7,6 +7,12 @@ apps that embed Converge. The Converge SDK stays pure; Runtime Runway handles
 the messy reality of binaries, containers, GPUs, app hosts, auth, storage,
 secrets, telemetry, and cloud services.
 
+## Boundary
+
+> Owns: auth, app host, storage, secrets, telemetry, deployment runtime, LLM/GPU paths, **managed-service wrappers** (Pub/Sub, Spanner, Memorystore). Does NOT own: governance (→ Converge); commercial state (→ Commerce Rails); in-process distributed consensus (→ Lattice Mesh).
+
+— Canonical claim: [Runtime Runway](https://github.com/Reflective-Lab/reflective/blob/main/KB/04-architecture/current-system-map.md#runtime-runway) in the boundary registry. Update there first; this README quotes that source.
+
 ## Relationship to Commerce Rails
 
 Runtime Runway and [Commerce Rails](../commerce-rails/) are sibling authorities with a clean boundary:
