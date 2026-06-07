@@ -33,14 +33,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout commerce-rails (sibling dependency)
-        uses: actions/checkout@v4
-        with:
-          repository: Reflective-Lab/commerce-rails
-          token: ${{ secrets.COMMERCE_RAILS_TOKEN }}
-          path: _commerce-rails
-      - name: Place commerce-rails at runway's sibling path
-        run: mv _commerce-rails "$GITHUB_WORKSPACE/../commerce-rails"
+      - name: Checkout Reflective sibling dependencies
+        run: bash scripts/ci/checkout-reflective-siblings.sh
       - name: Install protoc
         run: |
           sudo apt-get update
