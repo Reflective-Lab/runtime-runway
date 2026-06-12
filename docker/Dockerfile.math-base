@@ -1,0 +1,77 @@
+# kenneth-backend-math-base
+# Math-capable Rust builder base for marquee-apps.
+#
+# Bundles pre-built OR-Tools (Google) and HIGHS (ERGO-Code) so that crates
+# depending on `ferrox-ortools-sys` / `ferrox-highs-sys` (with their `link`
+# feature enabled — which is what `converge-ferrox-solver`'s `ortools` and
+# `highs` features enable transitively) can compile against pre-built C++
+# libraries instead of re-compiling them on every Cloud Build.
+#
+# Versions pinned to match `mosaic-extensions/ferrox-solvers/Makefile`. When
+# the ferrox-solvers Makefile bumps a tag, bump it here and rebuild + repush.
+#
+# Build + push:
+#   gcloud builds submit \
+#     --project=wolfgang-kb-prod \
+#     --tag=europe-west1-docker.pkg.dev/wolfgang-kb-prod/wolfgang/kenneth-backend-math-base:latest \
+#     -f docker/Dockerfile.math-base \
+#     docker/
+#
+# Consumers (set both env vars before `cargo build`):
+#   ENV FERROX_ORTOOLS_ROOT=/opt/ortools-src/build
+#   ENV FERROX_HIGHS_ROOT=/opt/highs-src/build
+#
+# Runtime image must also carry the OR-Tools / HIGHS shared libraries — see
+# the runtime stage of consuming apps (e.g., quorum-sense's
+# `deploy/backend/Dockerfile.cloudrun`).
+
+ARG RUST_VERSION=1.96
+ARG ORTOOLS_TAG=v9.15
+ARG HIGHS_TAG=v1.14.0
+
+FROM rust:${RUST_VERSION}-bookworm
+
+# C++ toolchain + CMake. protobuf-compiler matches wolfgang's
+# kenneth-backend-base so this image is a drop-in replacement for that base
+# wherever wolfgang's protobuf usage applies.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential \
+      cmake \
+      git \
+      protobuf-compiler \
+      libssl-dev \
+      pkg-config \
+      ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# ─── OR-Tools (mirrors `make ortools` in ferrox-solvers/Makefile) ─────────────
+ARG ORTOOLS_TAG
+RUN git clone --depth 1 --branch ${ORTOOLS_TAG} \
+      https://github.com/google/or-tools /opt/ortools-src \
+ && cmake -S /opt/ortools-src -B /opt/ortools-src/build \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_DEPS=ON \
+      -DBUILD_SHARED_LIBS=ON \
+      -DBUILD_EXAMPLES=OFF \
+      -DBUILD_TESTS=OFF \
+      -DUSE_GLOP=ON \
+      -DUSE_CP_SAT=ON \
+      -DUSE_SCIP=OFF \
+      -DUSE_COINOR=OFF \
+ && cmake --build /opt/ortools-src/build -j"$(nproc)" --target ortools
+
+# ─── HIGHS (mirrors `make highs`) ─────────────────────────────────────────────
+ARG HIGHS_TAG
+RUN git clone --depth 1 --branch ${HIGHS_TAG} \
+      https://github.com/ERGO-Code/HiGHS /opt/highs-src \
+ && cmake -S /opt/highs-src -B /opt/highs-src/build \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_SHARED_LIBS=ON \
+      -DFAST_BUILD=ON \
+ && cmake --build /opt/highs-src/build -j"$(nproc)"
+
+# Env vars consumed by `ferrox-ortools-sys/build.rs` and
+# `ferrox-highs-sys/build.rs` (both look for `FERROX_<LIB>_ROOT` first,
+# falling back to vendor/ relative paths).
+ENV FERROX_ORTOOLS_ROOT=/opt/ortools-src/build
+ENV FERROX_HIGHS_ROOT=/opt/highs-src/build
