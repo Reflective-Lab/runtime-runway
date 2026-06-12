@@ -1,0 +1,36 @@
+# Cloud Build config for kenneth-backend-math-base.
+#
+# Usage:
+#   gcloud builds submit \
+#     --project=wolfgang-kb-prod \
+#     --config=docker/cloudbuild.math-base.yaml \
+#     docker/
+
+substitutions:
+  _TAG: "latest"
+  _REPO: "europe-west1-docker.pkg.dev/wolfgang-kb-prod/wolfgang"
+
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    env:
+      - "DOCKER_BUILDKIT=1"
+    args:
+      - "build"
+      - "-t"
+      - "${_REPO}/kenneth-backend-math-base:${_TAG}"
+      - "-f"
+      - "Dockerfile.math-base"
+      - "."
+
+images:
+  - "${_REPO}/kenneth-backend-math-base:${_TAG}"
+
+options:
+  # OR-Tools is a heavy C++ compile; use a large machine to keep the
+  # total wall-clock under the timeout.
+  machineType: "E2_HIGHCPU_32"
+  logging: CLOUD_LOGGING_ONLY
+
+# 90 min ceiling. Empirically OR-Tools alone is ~30-45 min single-threaded;
+# parallelized on 32 vCPUs we expect ~10-15 min for OR-Tools + ~3 min for HIGHS.
+timeout: "5400s"
