@@ -31,18 +31,24 @@ ARG HIGHS_TAG=v1.14.0
 
 FROM rust:${RUST_VERSION}-bookworm
 
-# C++ toolchain + CMake. protobuf-compiler matches wolfgang's
+# C++ toolchain + modern CMake. protobuf-compiler matches wolfgang's
 # kenneth-backend-base so this image is a drop-in replacement for that base
 # wherever wolfgang's protobuf usage applies.
+#
+# CMake is installed from PyPI rather than apt because OR-Tools v9.15
+# requires CMake ≥ 3.27 (uses the SYSTEM keyword in FetchContent which
+# Bookworm's cmake 3.25 doesn't recognize, causing the zlib subbuild patch
+# step to fail with `can't open patch 'SYSTEM'`).
 RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential \
-      cmake \
       git \
       protobuf-compiler \
       libssl-dev \
       pkg-config \
       ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+      python3-pip \
+    && rm -rf /var/lib/apt/lists/* \
+ && pip3 install --no-cache-dir --break-system-packages "cmake>=3.27"
 
 # ─── OR-Tools (mirrors `make ortools` in ferrox-solvers/Makefile) ─────────────
 ARG ORTOOLS_TAG
