@@ -8,12 +8,21 @@ license.workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
-sentry-tracing = "0.33"
 opentelemetry = { workspace = true }
 opentelemetry-otlp = { workspace = true }
 opentelemetry_sdk = { workspace = true }
-sentry = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-opentelemetry = { workspace = true }
 tracing-subscriber = { workspace = true }
+
+# Optional: sentry. Default-on preserves existing behavior for consumers that
+# don't override; binaries that don't want the sentry-types coherence break
+# under rustc 1.96 (e.g., quorum-server while the ecosystem catches up) can
+# `default-features = false` and skip the sentry chain entirely.
+sentry = { workspace = true, optional = true }
+sentry-tracing = { version = "0.33", optional = true }
+
+[features]
+default = []
+sentry = ["dep:sentry", "dep:sentry-tracing"]

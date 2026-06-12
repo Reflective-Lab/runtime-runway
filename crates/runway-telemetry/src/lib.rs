@@ -7,6 +7,7 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitEx
 
 /// Returned by `init()`. Flushes spans and Sentry events on drop.
 pub struct TelemetryGuard {
+    #[cfg(feature = "sentry")]
     _sentry: sentry::ClientInitGuard,
 }
 
@@ -22,7 +23,8 @@ pub struct TelemetryConfig {
     pub service: String,
     /// Deployment environment: "dev", "staging", "prod".
     pub env: String,
-    /// Sentry DSN. If empty, Sentry is disabled.
+    /// Sentry DSN. If empty, Sentry is disabled. Ignored entirely when the
+    /// `sentry` feature is disabled.
     pub sentry_dsn: String,
     /// OTLP endpoint. Defaults to Cloud Trace via the standard GCP OTLP endpoint.
     pub otlp_endpoint: Option<String>,
@@ -43,6 +45,7 @@ impl TelemetryConfig {
 ///
 /// Call once at the top of `main()`. Hold the returned `TelemetryGuard` for the process lifetime.
 pub fn init(config: TelemetryConfig) -> Result<TelemetryGuard> {
+    #[cfg(feature = "sentry")]
     let sentry_guard = if !config.sentry_dsn.is_empty() {
         sentry::init((
             config.sentry_dsn.clone(),
@@ -63,15 +66,19 @@ pub fn init(config: TelemetryConfig) -> Result<TelemetryGuard> {
     let local_dev = std::env::var("LOCAL_DEV").as_deref() == Ok("true");
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     if local_dev && config.otlp_endpoint.is_none() {
-        tracing_subscriber::registry()
+        let registry = tracing_subscriber::registry()
             .with(filter)
-            .with(tracing_subscriber::fmt::layer().json().flatten_event(true))
-            .with(sentry_tracing::layer())
-            .init();
+            .with(tracing_subscriber::fmt::layer().json().flatten_event(true));
+
+        #[cfg(feature = "sentry")]
+        let registry = registry.with(sentry_tracing::layer());
+
+        registry.init();
 
         tracing::info!(service = %config.service, env = %config.env, "telemetry initialised without otlp");
 
         return Ok(TelemetryGuard {
+            #[cfg(feature = "sentry")]
             _sentry: sentry_guard,
         });
     }
@@ -98,17 +105,21 @@ pub fn init(config: TelemetryConfig) -> Result<TelemetryGuard> {
     global::set_tracer_provider(provider.clone());
     let tracer = provider.tracer(config.service.clone());
 
-    // JSON subscriber (→ Cloud Logging) + OTel layer + Sentry layer
-    tracing_subscriber::registry()
+    // JSON subscriber (→ Cloud Logging) + OTel layer + (optional) Sentry layer
+    let registry = tracing_subscriber::registry()
         .with(filter)
         .with(tracing_subscriber::fmt::layer().json().flatten_event(true))
-        .with(OpenTelemetryLayer::new(tracer))
-        .with(sentry_tracing::layer())
-        .init();
+        .with(OpenTelemetryLayer::new(tracer));
+
+    #[cfg(feature = "sentry")]
+    let registry = registry.with(sentry_tracing::layer());
+
+    registry.init();
 
     tracing::info!(service = %config.service, env = %config.env, "telemetry initialised");
 
     Ok(TelemetryGuard {
+        #[cfg(feature = "sentry")]
         _sentry: sentry_guard,
     })
 }
