@@ -92,3 +92,11 @@ RUN git clone --depth 1 --branch ${HIGHS_TAG} \
 # falling back to vendor/ relative paths).
 ENV FERROX_ORTOOLS_ROOT=/opt/ortools-src/build
 ENV FERROX_HIGHS_ROOT=/opt/highs-src/build
+
+# RUSTFLAGS — force-link absl + protobuf libs that ferrox-ortools-sys's
+# wrapper.cc references at compile time. ferrox's
+# `link_ortools_dylib_dependencies` is #[cfg(target_os = "macos")] only and
+# emits these via otool discovery; on Linux we have to pass them explicitly.
+# Headed for QF-2026-06-13-XX: patch ferrox to do `ldd` / `readelf -d` on
+# Linux so this RUSTFLAGS gymnastics goes away.
+ENV RUSTFLAGS="-C link-arg=-Wl,--copy-dt-needed-entries"
