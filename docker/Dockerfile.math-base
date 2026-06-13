@@ -104,4 +104,4 @@ ENV FERROX_HIGHS_ROOT=/opt/highs-src/build
 # #[cfg(target_os = "macos")] only — Linux has no equivalent emit. Tracked
 # as platform tech debt; once ferrox grows a Linux arm (readelf/ldd-based)
 # this RUSTFLAGS gymnastics goes away.
-ENV RUSTFLAGS="-C link-arg=-fuse-ld=bfd -C link-arg=-Wl,--copy-dt-needed-entries"
+ENV RUSTFLAGS="-C link-arg=-fuse-ld=bfd -C link-arg=-Wl,--copy-dt-needed-entries -C link-arg=-Wl,--allow-shlib-undefined"
