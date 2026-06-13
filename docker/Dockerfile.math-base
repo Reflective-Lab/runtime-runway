@@ -70,7 +70,7 @@ RUN git clone --depth 1 --branch ${ORTOOLS_TAG} \
       -DUSE_CP_SAT=ON \
       -DUSE_SCIP=OFF \
       -DUSE_COINOR=OFF \
- && cmake --build /opt/ortools-src/build -j"$(nproc)" --target ortools \
+ && cmake --build /opt/ortools-src/build -j"$(nproc)" \
  && cmake --install /opt/ortools-src/build \
  && ldconfig
 
