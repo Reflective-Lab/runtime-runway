@@ -51,11 +51,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && pip3 install --no-cache-dir --break-system-packages "cmake>=3.27"
 
 # ─── OR-Tools (mirrors `make ortools` in ferrox-solvers/Makefile) ─────────────
+# CMAKE_INSTALL_PREFIX=/usr/local — needed because ferrox-ortools-sys's
+# build.rs only does explicit dylib-dependency discovery on macOS via `otool
+# -L` (link_ortools_dylib_dependencies is #[cfg(target_os = "macos")]). On
+# Linux the linker has to find libabsl_* + libprotobuf via default search
+# paths; `cmake --install` puts them under /usr/local/lib which ld auto-scans.
 ARG ORTOOLS_TAG
 RUN git clone --depth 1 --branch ${ORTOOLS_TAG} \
       https://github.com/google/or-tools /opt/ortools-src \
  && cmake -S /opt/ortools-src -B /opt/ortools-src/build \
       -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/usr/local \
       -DBUILD_DEPS=ON \
       -DBUILD_SHARED_LIBS=ON \
       -DBUILD_EXAMPLES=OFF \
@@ -64,7 +70,9 @@ RUN git clone --depth 1 --branch ${ORTOOLS_TAG} \
       -DUSE_CP_SAT=ON \
       -DUSE_SCIP=OFF \
       -DUSE_COINOR=OFF \
- && cmake --build /opt/ortools-src/build -j"$(nproc)" --target ortools
+ && cmake --build /opt/ortools-src/build -j"$(nproc)" --target ortools \
+ && cmake --install /opt/ortools-src/build \
+ && ldconfig
 
 # ─── HIGHS (mirrors `make highs`) ─────────────────────────────────────────────
 ARG HIGHS_TAG
@@ -72,9 +80,12 @@ RUN git clone --depth 1 --branch ${HIGHS_TAG} \
       https://github.com/ERGO-Code/HiGHS /opt/highs-src \
  && cmake -S /opt/highs-src -B /opt/highs-src/build \
       -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/usr/local \
       -DBUILD_SHARED_LIBS=ON \
       -DFAST_BUILD=ON \
- && cmake --build /opt/highs-src/build -j"$(nproc)"
+ && cmake --build /opt/highs-src/build -j"$(nproc)" \
+ && cmake --install /opt/highs-src/build \
+ && ldconfig
 
 # Env vars consumed by `ferrox-ortools-sys/build.rs` and
 # `ferrox-highs-sys/build.rs` (both look for `FERROX_<LIB>_ROOT` first,
