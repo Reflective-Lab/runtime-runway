@@ -104,4 +104,8 @@ ENV FERROX_HIGHS_ROOT=/opt/highs-src/build
 # #[cfg(target_os = "macos")] only — Linux has no equivalent emit. Tracked
 # as platform tech debt; once ferrox grows a Linux arm (readelf/ldd-based)
 # this RUSTFLAGS gymnastics goes away.
-ENV RUSTFLAGS="-C link-arg=-fuse-ld=bfd -C link-arg=-Wl,--copy-dt-needed-entries -C link-arg=-Wl,--allow-shlib-undefined"
+# Set after the ferrox-solvers patch (Reflective-Lab/ferrox-solvers PR
+# adding Linux DT_NEEDED discovery via readelf): build.rs now emits explicit
+# `cargo:rustc-link-lib=dylib=<name>` for every transitive shared library
+# libortools.so / libhighs.so depend on, so rustc passes them to the linker
+# directly. No platform-specific RUSTFLAGS gymnastics needed.
