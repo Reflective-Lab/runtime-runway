@@ -61,6 +61,8 @@ RUN git clone --depth 1 --branch ${ORTOOLS_TAG} \
       https://github.com/google/or-tools /opt/ortools-src \
  && cmake -S /opt/ortools-src -B /opt/ortools-src/build \
       -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_CXX_FLAGS="-march=x86-64-v2" \
+      -DCMAKE_C_FLAGS="-march=x86-64-v2" \
       -DCMAKE_INSTALL_PREFIX=/usr/local \
       -DBUILD_DEPS=ON \
       -DBUILD_SHARED_LIBS=ON \
@@ -80,6 +82,8 @@ RUN git clone --depth 1 --branch ${HIGHS_TAG} \
       https://github.com/ERGO-Code/HiGHS /opt/highs-src \
  && cmake -S /opt/highs-src -B /opt/highs-src/build \
       -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_CXX_FLAGS="-march=x86-64-v2" \
+      -DCMAKE_C_FLAGS="-march=x86-64-v2" \
       -DCMAKE_INSTALL_PREFIX=/usr/local \
       -DBUILD_SHARED_LIBS=ON \
       -DFAST_BUILD=ON \
